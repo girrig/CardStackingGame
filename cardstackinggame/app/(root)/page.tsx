@@ -1,103 +1,250 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import { Hammer, Plus } from "lucide-react";
+import { useState } from "react";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+const CardStackingGame = () => {
+  // Define card types and their properties
+  const cardDatabase = {
+    test: { name: "Test Card", icon: Hammer, color: "#8B4513" },
+    tester: { name: "Tester Card", icon: Hammer, color: "#696969" },
+  };
+
+  // Define combination recipes
+  const recipes = {
+    "test+test": "tester",
+  };
+
+  // Initial inventory
+  const [inventory, setInventory] = useState([
+    { id: 1, type: "test", quantity: 5 },
+  ]);
+
+  const [combinationSlots, setCombinationSlots] = useState([null, null]);
+  const [selectedCard, setSelectedCard] = useState(null);
+  const [message, setMessage] = useState("");
+
+  // Handle card selection
+  const handleCardClick = (card) => {
+    if (card.quantity > 0) {
+      setSelectedCard(card);
+    }
+  };
+
+  // Handle slot click
+  const handleSlotClick = (slotIndex) => {
+    if (selectedCard && selectedCard.quantity > 0) {
+      const newSlots = [...combinationSlots];
+      newSlots[slotIndex] = { ...selectedCard, quantity: 1 };
+      setCombinationSlots(newSlots);
+
+      // Reduce quantity in inventory
+      setInventory((prev) =>
+        prev
+          .map((item) =>
+            item.id === selectedCard.id
+              ? { ...item, quantity: item.quantity - 1 }
+              : item
+          )
+          .filter((item) => item.quantity > 0)
+      );
+
+      setSelectedCard(null);
+    }
+  };
+
+  // Handle combining cards
+  const handleCombine = () => {
+    if (combinationSlots[0] && combinationSlots[1]) {
+      const key1 = `${combinationSlots[0].type}+${combinationSlots[1].type}`;
+      const key2 = `${combinationSlots[1].type}+${combinationSlots[0].type}`;
+
+      const result = recipes[key1] || recipes[key2];
+
+      if (result) {
+        // Add new card to inventory
+        const existingCard = inventory.find((item) => item.type === result);
+        if (existingCard) {
+          setInventory((prev) =>
+            prev.map((item) =>
+              item.type === result
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+            )
+          );
+        } else {
+          const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
+          setInventory((prev) => [
+            ...prev,
+            { id: newId, type: result, quantity: 1 },
+          ]);
+        }
+
+        setMessage(`Created ${cardDatabase[result].name}!`);
+        setCombinationSlots([null, null]);
+        setSelectedCard(null);
+
+        // Clear message after 2 seconds
+        setTimeout(() => setMessage(""), 2000);
+      } else {
+        setMessage("These cards cannot be combined!");
+        setSelectedCard(null);
+        setTimeout(() => setMessage(""), 2000);
+      }
+    }
+  };
+
+  // Clear combination slots
+  const clearSlots = () => {
+    // Return cards to inventory
+    combinationSlots.forEach((slot) => {
+      if (slot) {
+        const existingCard = inventory.find((item) => item.type === slot.type);
+        if (existingCard) {
+          setInventory((prev) =>
+            prev.map((item) =>
+              item.type === slot.type
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+            )
+          );
+        } else {
+          const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
+          setInventory((prev) => [
+            ...prev,
+            { id: newId, type: slot.type, quantity: 1 },
+          ]);
+        }
+      }
+    });
+    setCombinationSlots([null, null]);
+    setSelectedCard(null);
+  };
+
+  // Card component
+  const Card = ({ card, isDraggable = true, showQuantity = true, onClick }) => {
+    const cardData = cardDatabase[card.type];
+    const IconComponent = cardData.icon;
+    const isSelected = selectedCard && selectedCard.id === card.id;
+
+    return (
+      <div
+        className={`w-24 h-32 bg-white border-2 rounded cursor-pointer hover:shadow-md transition-all flex flex-col items-center justify-center relative select-none ${
+          isSelected ? "border-blue-500 bg-blue-50" : "border-gray-300"
+        } ${card.quantity === 0 ? "opacity-30" : ""}`}
+        onClick={() => onClick && onClick(card)}
+      >
+        <IconComponent size={28} color={cardData.color} />
+        <div className="text-sm font-medium text-gray-800 mt-2 text-center px-1">
+          {cardData.name}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        {showQuantity && card.quantity > 1 && (
+          <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-semibold">
+            {card.quantity}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-semibold text-gray-900 mb-8">
+          Colony Builder
+        </h1>
+
+        <div className="flex gap-8">
+          {/* Main Inventory Area */}
+          <div className="flex-1">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h2 className="text-xl font-medium text-gray-900 mb-6">
+                Inventory
+              </h2>
+              <div className="flex flex-wrap gap-4">
+                {inventory.map((card) => (
+                  <Card key={card.id} card={card} onClick={handleCardClick} />
+                ))}
+              </div>
+              {inventory.length === 0 && (
+                <div className="text-center py-16 text-gray-500">
+                  Your inventory is empty
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Combination Area */}
+          <div className="w-64">
+            <div className="bg-white border border-gray-200 rounded-lg p-6">
+              <h2 className="text-xl font-medium text-gray-900 mb-6">
+                Combine
+              </h2>
+
+              {/* Combination Slots */}
+              <div className="space-y-4 mb-6">
+                {combinationSlots.map((slot, index) => (
+                  <div
+                    key={index}
+                    className={`w-full h-32 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all ${
+                      selectedCard && !slot
+                        ? "border-blue-400 bg-blue-50 hover:bg-blue-100"
+                        : "border-gray-300 bg-gray-50"
+                    }`}
+                    onClick={() => !slot && handleSlotClick(index)}
+                  >
+                    {slot ? (
+                      <Card
+                        card={slot}
+                        isDraggable={false}
+                        showQuantity={false}
+                      />
+                    ) : (
+                      <div className="text-gray-400 text-sm">
+                        {selectedCard
+                          ? "Click to place card"
+                          : "Select a card first"}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Plus Icon */}
+              <div className="flex justify-center mb-6">
+                <Plus className="text-gray-400" size={20} />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <button
+                  onClick={handleCombine}
+                  disabled={!combinationSlots[0] || !combinationSlots[1]}
+                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded py-3 px-4 font-medium transition-colors"
+                >
+                  Combine
+                </button>
+
+                <button
+                  onClick={clearSlots}
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white rounded py-2 px-4 font-medium transition-colors"
+                >
+                  Clear
+                </button>
+              </div>
+
+              {/* Message Area */}
+              {message && (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded text-green-800 text-sm text-center">
+                  {message}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default CardStackingGame;
