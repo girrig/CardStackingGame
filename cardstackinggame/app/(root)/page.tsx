@@ -1,6 +1,7 @@
 "use client";
 
-import { Hammer, Plus } from "lucide-react";
+import Card from "@/components/Card";
+import { Hammer } from "lucide-react";
 import { useState } from "react";
 
 const CardStackingGame = () => {
@@ -21,45 +22,45 @@ const CardStackingGame = () => {
   ]);
 
   const [combinationSlots, setCombinationSlots] = useState([null, null]);
-  const [selectedCard, setSelectedCard] = useState(null);
+  const [heldCard, setHeldCard] = useState(null);
   const [message, setMessage] = useState("");
 
   // Handle card selection
   const handleCardClick = (card) => {
     if (card.quantity > 0) {
-      setSelectedCard(card);
+      // Just select the card, don't deduct yet
+      setHeldCard(card);
     }
   };
 
   // Handle slot click
   const handleSlotClick = (slotIndex) => {
-    if (selectedCard && selectedCard.quantity > 0) {
+    if (heldCard) {
+      // Move from inventory to slot
       const newSlots = [...combinationSlots];
-      newSlots[slotIndex] = { ...selectedCard, quantity: 1 };
+      newSlots[slotIndex] = { ...heldCard, quantity: 1 };
       setCombinationSlots(newSlots);
 
-      // Reduce quantity in inventory
+      // Deduct from inventory
       setInventory((prev) =>
         prev
           .map((item) =>
-            item.id === selectedCard.id
+            item.id === heldCard.id
               ? { ...item, quantity: item.quantity - 1 }
               : item
           )
           .filter((item) => item.quantity > 0)
       );
 
-      setSelectedCard(null);
+      setHeldCard(null); // Empty your hand
     }
   };
 
   // Handle combining cards
   const handleCombine = () => {
     if (combinationSlots[0] && combinationSlots[1]) {
-      const key1 = `${combinationSlots[0].type}+${combinationSlots[1].type}`;
-      const key2 = `${combinationSlots[1].type}+${combinationSlots[0].type}`;
-
-      const result = recipes[key1] || recipes[key2];
+      const key = `${combinationSlots[0].type}+${combinationSlots[1].type}`;
+      const result = recipes[key];
 
       if (result) {
         // Add new card to inventory
@@ -82,13 +83,13 @@ const CardStackingGame = () => {
 
         setMessage(`Created ${cardDatabase[result].name}!`);
         setCombinationSlots([null, null]);
-        setSelectedCard(null);
+        setHeldCard(null);
 
         // Clear message after 2 seconds
         setTimeout(() => setMessage(""), 2000);
       } else {
         setMessage("These cards cannot be combined!");
-        setSelectedCard(null);
+        setHeldCard(null);
         setTimeout(() => setMessage(""), 2000);
       }
     }
@@ -118,33 +119,7 @@ const CardStackingGame = () => {
       }
     });
     setCombinationSlots([null, null]);
-    setSelectedCard(null);
-  };
-
-  // Card component
-  const Card = ({ card, isDraggable = true, showQuantity = true, onClick }) => {
-    const cardData = cardDatabase[card.type];
-    const IconComponent = cardData.icon;
-    const isSelected = selectedCard && selectedCard.id === card.id;
-
-    return (
-      <div
-        className={`w-24 h-32 bg-white border-2 rounded cursor-pointer hover:shadow-md transition-all flex flex-col items-center justify-center relative select-none ${
-          isSelected ? "border-blue-500 bg-blue-50" : "border-gray-300"
-        } ${card.quantity === 0 ? "opacity-30" : ""}`}
-        onClick={() => onClick && onClick(card)}
-      >
-        <IconComponent size={28} color={cardData.color} />
-        <div className="text-sm font-medium text-gray-800 mt-2 text-center px-1">
-          {cardData.name}
-        </div>
-        {showQuantity && card.quantity > 1 && (
-          <div className="absolute -top-2 -right-2 bg-blue-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-semibold">
-            {card.quantity}
-          </div>
-        )}
-      </div>
-    );
+    setHeldCard(null);
   };
 
   return (
@@ -162,9 +137,18 @@ const CardStackingGame = () => {
                 Inventory
               </h2>
               <div className="flex flex-wrap gap-4">
-                {inventory.map((card) => (
-                  <Card key={card.id} card={card} onClick={handleCardClick} />
-                ))}
+                {inventory.map((card) => {
+                  const isSelected = heldCard && heldCard.id === card.id;
+                  return (
+                    <Card
+                      key={card.id}
+                      card={card}
+                      cardDatabase={cardDatabase}
+                      onClick={handleCardClick}
+                      isSelected={isSelected}
+                    />
+                  );
+                })}
               </div>
               {inventory.length === 0 && (
                 <div className="text-center py-16 text-gray-500">
@@ -186,33 +170,20 @@ const CardStackingGame = () => {
                 {combinationSlots.map((slot, index) => (
                   <div
                     key={index}
-                    className={`w-full h-32 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer transition-all ${
-                      selectedCard && !slot
-                        ? "border-blue-400 bg-blue-50 hover:bg-blue-100"
-                        : "border-gray-300 bg-gray-50"
-                    }`}
+                    className="w-full h-32 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg flex items-center justify-center cursor-pointer transition-all hover:bg-gray-100"
                     onClick={() => !slot && handleSlotClick(index)}
                   >
                     {slot ? (
-                      <Card
-                        card={slot}
-                        isDraggable={false}
-                        showQuantity={false}
-                      />
+                      <Card card={slot} cardDatabase={cardDatabase} />
                     ) : (
                       <div className="text-gray-400 text-sm">
-                        {selectedCard
+                        {heldCard
                           ? "Click to place card"
                           : "Select a card first"}
                       </div>
                     )}
                   </div>
                 ))}
-              </div>
-
-              {/* Plus Icon */}
-              <div className="flex justify-center mb-6">
-                <Plus className="text-gray-400" size={20} />
               </div>
 
               {/* Action Buttons */}
