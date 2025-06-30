@@ -126,7 +126,7 @@ const CardStackingGame = () => {
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-semibold text-gray-900 mb-8">
-          Colony Builder
+          Card Stacking Game
         </h1>
 
         <div className="flex gap-8">
