@@ -1,0 +1,12 @@
+{
+  "test": {
+    "name": "Test Card",
+    "icon": "Hammer",
+    "color": "#8B4513"
+  },
+  "tester": {
+    "name": "Tester Card", 
+    "icon": "Wrench",
+    "color": "#696969"
+  }
+}

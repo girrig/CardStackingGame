@@ -1,15 +1,24 @@
 "use client";
 
 import Card from "@/components/Card";
-import { Hammer } from "lucide-react";
-import { useState } from "react";
+import cardData from "@/data/cards.json";
+import { getIcon } from "@/utils/iconMap";
+import { useEffect, useState } from "react";
 
 const CardStackingGame = () => {
-  // Define card types and their properties
-  const cardDatabase = {
-    test: { name: "Test Card", icon: Hammer, color: "#8B4513" },
-    tester: { name: "Tester Card", icon: Hammer, color: "#696969" },
-  };
+  // Load card data from JSON and map icon strings to actual icon components
+  const [cardDatabase, setCardDatabase] = useState({});
+
+  useEffect(() => {
+    const loadedCards = {};
+    Object.entries(cardData).forEach(([key, card]) => {
+      loadedCards[key] = {
+        ...card,
+        icon: getIcon(card.icon),
+      };
+    });
+    setCardDatabase(loadedCards);
+  }, []);
 
   // Define combination recipes
   const recipes = {
@@ -139,6 +148,8 @@ const CardStackingGame = () => {
               <div className="flex flex-wrap gap-4">
                 {inventory.map((card) => {
                   const isSelected = heldCard && heldCard.id === card.id;
+                  const cardInfo = cardDatabase[card.type];
+                  if (!cardInfo) return null; // Skip rendering if card data not loaded yet
                   return (
                     <Card
                       key={card.id}
