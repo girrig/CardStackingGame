@@ -1,12 +1,14 @@
-{
-  "test": {
-    "name": "Test Card",
+[
+  {
+    "id": "test",
+    "name": "Test",
     "icon": "Hammer",
     "color": "#8B4513"
   },
-  "tester": {
-    "name": "Tester Card", 
+  {
+    "id": "tester",
+    "name": "Tester", 
     "icon": "Wrench",
     "color": "#696969"
   }
-}
+]

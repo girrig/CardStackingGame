@@ -2,28 +2,26 @@
 
 import Card from "@/components/Card";
 import cardData from "@/data/cards.json";
+import recipeData from "@/data/recipes.json";
 import { getIcon } from "@/utils/iconMap";
 import { useEffect, useState } from "react";
 
 const CardStackingGame = () => {
   // Load card data from JSON and map icon strings to actual icon components
   const [cardDatabase, setCardDatabase] = useState({});
+  const [recipeDatabase, setRecipeDatabase] = useState({});
 
   useEffect(() => {
     const loadedCards = {};
-    Object.entries(cardData).forEach(([key, card]) => {
-      loadedCards[key] = {
+    cardData.forEach((card) => {
+      loadedCards[card.id] = {
         ...card,
         icon: getIcon(card.icon),
       };
     });
     setCardDatabase(loadedCards);
+    setRecipeDatabase(recipeData);
   }, []);
-
-  // Define combination recipes
-  const recipes = {
-    "test+test": "tester",
-  };
 
   // Initial inventory
   const [inventory, setInventory] = useState([
@@ -65,11 +63,42 @@ const CardStackingGame = () => {
     }
   };
 
-  // Handle combining cards
+  // Handles combining two cards from the combination slots
   const handleCombine = () => {
+    // Ensure both combination slots are filled
     if (combinationSlots[0] && combinationSlots[1]) {
-      const key = `${combinationSlots[0].type}+${combinationSlots[1].type}`;
-      const result = recipes[key];
+      // Get the types of cards currently in combination slots
+      const cardTypes = [combinationSlots[0].type, combinationSlots[1].type];
+
+      // Find a matching recipe if it exists
+      const recipe = recipeDatabase.find((r) => {
+        // If different lengths, exit early
+        if (r.cards.length !== cardTypes.length) return false;
+
+        // Count the frequency of each card type
+        const recipeCounts = new Map<string, number>();
+        const comboCounts = new Map<string, number>();
+
+        r.cards.forEach((card) => {
+          recipeCounts.set(card, (recipeCounts.get(card) || 0) + 1);
+        });
+        cardTypes.forEach((card) => {
+          comboCounts.set(card, (comboCounts.get(card) || 0) + 1);
+        });
+
+        // If different number of unique card types, exit early
+        if (recipeCounts.size !== comboCounts.size) return false;
+
+        // Ensure exact same quantities for each card type
+        for (const [card, count] of recipeCounts) {
+          if (comboCounts.get(card) !== count) return false;
+        }
+
+        return true;
+      });
+
+      // Extract the result from the matching recipe (if found)
+      const result = recipe?.result;
 
       if (result) {
         // Add new card to inventory
