@@ -4,12 +4,39 @@ import Card from "@/components/Card";
 import cardData from "@/data/cards.json";
 import recipeData from "@/data/recipes.json";
 import { getIcon } from "@/utils/iconMap";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
   // Load card data from JSON and map icon strings to actual icon components
   const [cardDatabase, setCardDatabase] = useState({});
   const [recipeDatabase, setRecipeDatabase] = useState({});
+
+  // Initial inventory
+  const [inventory, setInventory] = useState([
+    { id: 1, type: "test", quantity: 5 },
+    { id: 2, type: "tester", quantity: 1 },
+  ]);
+
+  const [combinationSlots, setCombinationSlots] = useState([null, null]);
+  const [heldCard, setHeldCard] = useState(null);
+  const [message, setMessage] = useState("");
+
+  // Drag and drop state
+  const [cardPositions, setCardPositions] = useState<
+    Map<number, { x: number; y: number }>
+  >(new Map());
+
+  // Tracks active dragging
+  const [dragState, setDragState] = useState<{
+    cardId: number;
+    startX: number;
+    startY: number;
+    offsetX: number;
+    offsetY: number;
+  } | null>(null);
+
+  // Hook for inventory area
+  const inventoryRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loadedCards = {};
@@ -23,16 +50,79 @@ const CardStackingGame = () => {
     setRecipeDatabase(recipeData);
   }, []);
 
-  // Initial inventory
-  const [inventory, setInventory] = useState([
-    { id: 1, type: "test", quantity: 5 },
-  ]);
+  // Initialize card positions for all inventory items
+  useEffect(() => {
+    setCardPositions((prev) => {
+      const newMap = new Map(prev);
+      inventory.forEach((card, index) => {
+        if (!newMap.has(card.id)) {
+          // Arrange cards in a grid pattern
+          const cardsPerRow = 8;
+          const cardWidth = 96 + 16; // card width + gap
+          const cardHeight = 128 + 16; // card height + gap
+          const x = (index % cardsPerRow) * cardWidth;
+          const y = Math.floor(index / cardsPerRow) * cardHeight;
+          newMap.set(card.id, { x, y });
+        }
+      });
+      return newMap;
+    });
+  }, [inventory]);
 
-  const [combinationSlots, setCombinationSlots] = useState([null, null]);
-  const [heldCard, setHeldCard] = useState(null);
-  const [message, setMessage] = useState("");
+  // Document-level drag event listeners
+  useEffect(() => {
+    const handleDocumentMouseMove = (e: MouseEvent) => {
+      if (!dragState) return;
 
-  // Handle card selection
+      const deltaX = e.clientX - dragState.startX;
+      const deltaY = e.clientY - dragState.startY;
+
+      // Calculate new position without boundaries
+      const newX = dragState.offsetX + deltaX;
+      const newY = dragState.offsetY + deltaY;
+
+      setCardPositions(
+        (prev) =>
+          new Map(
+            prev.set(dragState.cardId, {
+              x: newX,
+              y: newY,
+            })
+          )
+      );
+    };
+
+    const handleDocumentMouseUp = () => {
+      setDragState(null);
+    };
+
+    if (dragState) {
+      document.addEventListener("mousemove", handleDocumentMouseMove);
+      document.addEventListener("mouseup", handleDocumentMouseUp);
+
+      return () => {
+        document.removeEventListener("mousemove", handleDocumentMouseMove);
+        document.removeEventListener("mouseup", handleDocumentMouseUp);
+      };
+    }
+  }, [dragState, cardPositions]);
+
+  // Handle drag start
+  const handleMouseDown = (e: React.MouseEvent, card: any) => {
+    e.preventDefault();
+
+    const currentPosition = cardPositions.get(card.id)!;
+
+    setDragState({
+      cardId: card.id,
+      startX: e.clientX,
+      startY: e.clientY,
+      offsetX: currentPosition.x,
+      offsetY: currentPosition.y,
+    });
+  };
+
+  // Handle card selection (for combination slots)
   const handleCardClick = (card) => {
     if (card.quantity > 0) {
       // Just select the card, don't deduct yet
@@ -174,27 +264,42 @@ const CardStackingGame = () => {
               <h2 className="text-xl font-medium text-gray-900 mb-6">
                 Inventory
               </h2>
-              <div className="flex flex-wrap gap-4">
+              <div
+                ref={inventoryRef}
+                className="relative h-96 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg"
+              >
                 {inventory.map((card) => {
                   const isSelected = heldCard && heldCard.id === card.id;
                   const cardInfo = cardDatabase[card.type];
                   if (!cardInfo) return null; // Skip rendering if card data not loaded yet
+
+                  const position = cardPositions.get(card.id) || { x: 0, y: 0 };
+
                   return (
-                    <Card
+                    <div
                       key={card.id}
-                      card={card}
-                      cardDatabase={cardDatabase}
-                      onClick={handleCardClick}
-                      isSelected={isSelected}
-                    />
+                      className="absolute"
+                      style={{
+                        transform: `translate(${position.x}px, ${position.y}px)`,
+                        zIndex: dragState?.cardId === card.id ? 1000 : 1,
+                      }}
+                      onMouseDown={(e) => handleMouseDown(e, card)}
+                    >
+                      <Card
+                        card={card}
+                        cardDatabase={cardDatabase}
+                        onClick={handleCardClick}
+                        isSelected={isSelected}
+                      />
+                    </div>
                   );
                 })}
+                {inventory.length === 0 && (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+                    Your inventory is empty
+                  </div>
+                )}
               </div>
-              {inventory.length === 0 && (
-                <div className="text-center py-16 text-gray-500">
-                  Your inventory is empty
-                </div>
-              )}
             </div>
           </div>
 
