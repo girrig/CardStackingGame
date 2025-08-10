@@ -8,6 +8,7 @@ const InventoryBox = ({
   setGlobalDragState,
   globalDragState,
   inventory,
+  setInventory,
   cardDatabase,
   heldCard,
   setHeldCard,
@@ -73,10 +74,33 @@ const InventoryBox = ({
     const offsetX = e.clientX - cardRect.left;
     const offsetY = e.clientY - cardRect.top;
 
+    let cardToDrag = card;
+
+    // If card has more than one copy, create a single card to drag and decrement the stack
+    if (card.quantity > 1) {
+      // Create a new card with quantity 1 for dragging
+      const newId = Math.max(...inventory.map((c) => c.id), 0) + 1;
+      cardToDrag = {
+        ...card,
+        id: newId,
+        quantity: 1,
+      };
+
+      // Immediately decrement the original stack
+      setInventory((prev) =>
+        prev.map((item) =>
+          item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
+        )
+      );
+    } else {
+      // For single cards, remove from inventory immediately
+      setInventory((prev) => prev.filter((item) => item.id !== card.id));
+    }
+
     // Set global drag state with offset information
     setGlobalDragState({
-      cardId: card.id,
-      card: card,
+      cardId: cardToDrag.id,
+      card: cardToDrag,
       startX: e.clientX,
       startY: e.clientY,
       currentX: e.clientX,

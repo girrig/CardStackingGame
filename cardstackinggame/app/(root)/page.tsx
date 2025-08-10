@@ -100,7 +100,8 @@ const CardStackingGame = () => {
       Math.max(
         ...combinationAreaCards.map((c) => c.id),
         0,
-        ...inventory.map((i) => i.id)
+        ...inventory.map((i) => i.id),
+        card.id
       ) + 1;
 
     const newCard = {
@@ -111,15 +112,6 @@ const CardStackingGame = () => {
       ...(dropX !== undefined && dropY !== undefined && { dropX, dropY }),
     };
     setCombinationAreaCards((prev) => [...prev, newCard]);
-
-    // Deduct from inventory
-    setInventory((prev) =>
-      prev
-        .map((item) =>
-          item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
   };
 
   // Global mouse event handlers for cross-component dragging
@@ -151,11 +143,45 @@ const CardStackingGame = () => {
           e.clientY <= invRect.bottom;
 
         if (isOverInventoryArea) {
-          handleCardDropToInventory(
-            globalDragState.cardId,
-            e.clientX,
-            e.clientY
+          // Check if this card was removed from inventory during drag start
+          const wasRemovedFromInventory = !inventory.some(
+            (item) => item.id === globalDragState.card.id
           );
+
+          if (wasRemovedFromInventory) {
+            // Only restore if the card is not currently in combination area
+            const isNotInCombination = !combinationAreaCards.some(
+              (item) => item.id === globalDragState.card.id
+            );
+
+            if (isNotInCombination) {
+              // Find if there's an existing stack of the same type to add to
+              const existingStack = inventory.find(
+                (item) => item.type === globalDragState.card.type
+              );
+
+              if (existingStack) {
+                // Restore to existing stack
+                setInventory((prev) =>
+                  prev.map((item) =>
+                    item.type === globalDragState.card.type
+                      ? { ...item, quantity: item.quantity + 1 }
+                      : item
+                  )
+                );
+              } else {
+                // Add back as a new single card
+                setInventory((prev) => [...prev, globalDragState.card]);
+              }
+            }
+          } else {
+            // Handle normal inventory reordering for existing cards
+            handleCardDropToInventory(
+              globalDragState.cardId,
+              e.clientX,
+              e.clientY
+            );
+          }
           setGlobalDragState(null);
           return;
         }
@@ -171,16 +197,13 @@ const CardStackingGame = () => {
           e.clientY <= combRect.bottom;
 
         if (isOverCombinationArea) {
-          // Check if this is a card from inventory or from combination area
-          const isFromInventory = inventory.some(
-            (item) => item.id === globalDragState.cardId
-          );
+          // Check if this is a card from combination area
           const isFromCombination = combinationAreaCards.some(
             (item) => item.id === globalDragState.cardId
           );
 
-          if (isFromInventory) {
-            // Move from inventory to combination area
+          if (!isFromCombination) {
+            // This is a card from inventory, move it to combination area
             // Calculate exact drop position relative to combination area using the offset
             const CONTAINER_BORDER = 2; // border-2 class = 2px border
             const relativeX =
@@ -198,7 +221,7 @@ const CardStackingGame = () => {
               relativeX,
               relativeY
             );
-          } else if (isFromCombination) {
+          } else {
             // This will be handled by CombinationBox's positioning system
             // Just clear the drag state - CombinationBox will handle repositioning
           }
@@ -207,7 +230,36 @@ const CardStackingGame = () => {
         }
       }
 
-      // If not dropped on any valid area, just clear the drag state
+      // If not dropped on any valid area, restore the card to inventory
+      const wasRemovedFromInventory = !inventory.some(
+        (item) => item.id === globalDragState.card.id
+      );
+      const isNotInCombination = !combinationAreaCards.some(
+        (item) => item.id === globalDragState.card.id
+      );
+
+      if (wasRemovedFromInventory && isNotInCombination) {
+        // Only restore if the card is not currently in combination area
+        // Find if there's an existing stack of the same type to add to
+        const existingStack = inventory.find(
+          (item) => item.type === globalDragState.card.type
+        );
+
+        if (existingStack) {
+          // Restore to existing stack
+          setInventory((prev) =>
+            prev.map((item) =>
+              item.type === globalDragState.card.type
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+            )
+          );
+        } else {
+          // Add back as a new single card
+          setInventory((prev) => [...prev, globalDragState.card]);
+        }
+      }
+
       setGlobalDragState(null);
     };
 

@@ -125,10 +125,18 @@ const CombinationBox = ({
 
   // Clear Area - Return all cards to inventory
   const clearArea = () => {
+    // Store current combination cards before clearing to avoid race conditions
+    const cardsToReturn = [...combinationAreaCards];
+
+    // Clear combination area immediately
+    setCombinationAreaCards([]);
+    setCardPositions(new Map());
+
+    // Then update inventory based on the snapshot
     setInventory((prevInventory) => {
       const newInventory = [...prevInventory];
 
-      combinationAreaCards.forEach((card) => {
+      cardsToReturn.forEach((card) => {
         const existingCardIndex = newInventory.findIndex(
           (item) => item.type === card.type
         );
@@ -155,9 +163,6 @@ const CombinationBox = ({
 
       return newInventory;
     });
-
-    setCombinationAreaCards([]);
-    setCardPositions(new Map());
   };
 
   return (
