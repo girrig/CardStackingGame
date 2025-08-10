@@ -31,6 +31,8 @@ const CardStackingGame = () => {
     startY: number;
     currentX: number;
     currentY: number;
+    offsetX: number;
+    offsetY: number;
   } | null>(null);
 
   // Container Refs
@@ -179,9 +181,18 @@ const CardStackingGame = () => {
 
           if (isFromInventory) {
             // Move from inventory to combination area
-            // Calculate exact drop position relative to combination area
-            const relativeX = e.clientX - combRect.left - 48; // Center horizontally
-            const relativeY = e.clientY - combRect.top - 64; // Center vertically
+            // Calculate exact drop position relative to combination area using the offset
+            const CONTAINER_BORDER = 2; // border-2 class = 2px border
+            const relativeX =
+              e.clientX -
+              combRect.left -
+              globalDragState.offsetX -
+              CONTAINER_BORDER;
+            const relativeY =
+              e.clientY -
+              combRect.top -
+              globalDragState.offsetY -
+              CONTAINER_BORDER;
             handleCardDropToCombination(
               globalDragState.card,
               relativeX,
@@ -258,8 +269,8 @@ const CardStackingGame = () => {
           <div
             className="fixed pointer-events-none z-50"
             style={{
-              left: globalDragState.currentX - 48, // Center the card on cursor (card width is 96px / 2 = 48px)
-              top: globalDragState.currentY - 64, // Center the card on cursor (card height is 128px / 2 = 64px)
+              left: globalDragState.currentX - globalDragState.offsetX,
+              top: globalDragState.currentY - globalDragState.offsetY,
             }}
           >
             <Card card={globalDragState.card} cardDatabase={cardDatabase} />

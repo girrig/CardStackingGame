@@ -67,7 +67,13 @@ const InventoryBox = ({
   const handleMouseDown = (e: React.MouseEvent, card: any) => {
     e.preventDefault();
 
-    // Set global drag state - centering will be handled by global system
+    // Calculate offset from mouse position to top-left of card
+    const cardElement = e.currentTarget as HTMLElement;
+    const cardRect = cardElement.getBoundingClientRect();
+    const offsetX = e.clientX - cardRect.left;
+    const offsetY = e.clientY - cardRect.top;
+
+    // Set global drag state with offset information
     setGlobalDragState({
       cardId: card.id,
       card: card,
@@ -75,6 +81,8 @@ const InventoryBox = ({
       startY: e.clientY,
       currentX: e.clientX,
       currentY: e.clientY,
+      offsetX: offsetX,
+      offsetY: offsetY,
     });
   };
 

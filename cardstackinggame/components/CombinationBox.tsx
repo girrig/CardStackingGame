@@ -72,9 +72,12 @@ const CombinationBox = ({
         );
         if (cardInCombination) {
           const rect = combinationAreaRef.current.getBoundingClientRect();
-          // Position card centered on cursor, exactly matching the floating preview
-          const relativeX = e.clientX - rect.left - 48; // Center horizontally
-          const relativeY = e.clientY - rect.top - 64; // Center vertically
+          // Position card using the offset to maintain grab position
+          const CONTAINER_BORDER = 2; // border-2 class = 2px border
+          const relativeX =
+            e.clientX - rect.left - globalDragState.offsetX - CONTAINER_BORDER;
+          const relativeY =
+            e.clientY - rect.top - globalDragState.offsetY - CONTAINER_BORDER;
 
           setCardPositions(
             (prev) =>
@@ -101,6 +104,12 @@ const CombinationBox = ({
   const handleMouseDown = (e: React.MouseEvent, card: any) => {
     e.preventDefault();
 
+    // Calculate offset from mouse position to top-left of card
+    const cardElement = e.currentTarget as HTMLElement;
+    const cardRect = cardElement.getBoundingClientRect();
+    const offsetX = e.clientX - cardRect.left;
+    const offsetY = e.clientY - cardRect.top;
+
     // Set global drag state for moving cards around combination area
     setGlobalDragState({
       cardId: card.id,
@@ -109,6 +118,8 @@ const CombinationBox = ({
       startY: e.clientY,
       currentX: e.clientX,
       currentY: e.clientY,
+      offsetX: offsetX,
+      offsetY: offsetY,
     });
   };
 
@@ -159,10 +170,10 @@ const CombinationBox = ({
         {/* Combination Area */}
         <div
           ref={combinationAreaRef}
-          className="w-full min-h-96 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg p-4 transition-all hover:bg-gray-100 relative overflow-hidden"
+          className="w-full min-h-96 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 relative overflow-hidden"
         >
           {combinationAreaCards.length === 0 ? (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg">
+            <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg p-4">
               Drag cards from your inventory and combined them here
             </div>
           ) : (
