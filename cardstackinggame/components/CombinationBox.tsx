@@ -110,10 +110,15 @@ const CombinationBox = ({
     const offsetX = e.clientX - cardRect.left;
     const offsetY = e.clientY - cardRect.top;
 
+    // Remove card from combination area during drag (like InventoryBox does)
+    setCombinationAreaCards((prev) =>
+      prev.filter((item) => item.id !== card.id)
+    );
+
     // Set global drag state for moving cards around combination area
     setGlobalDragState({
       cardId: card.id,
-      card: card,
+      card: { ...card, fromCombinationArea: true },
       startX: e.clientX,
       startY: e.clientY,
       currentX: e.clientX,
@@ -194,12 +199,11 @@ const CombinationBox = ({
               return (
                 <div
                   key={`combination-card-${card.id}-${index}`}
-                  className={`absolute ${
-                    isBeingDragged ? "opacity-0" : "opacity-100"
-                  }`}
+                  className="absolute"
                   style={{
                     transform: `translate(${position.x}px, ${position.y}px)`,
                     zIndex: 10,
+                    opacity: isBeingDragged ? 0 : 1,
                   }}
                   onMouseDown={(e) => handleMouseDown(e, card)}
                 >

@@ -144,15 +144,11 @@ const CardStackingGame = () => {
 
         if (isOverInventoryArea) {
           // Check if this card is from the combination area
-          const isFromCombination = combinationAreaCards.some(
-            (item) => item.id === globalDragState.card.id
-          );
+          const isFromCombination = globalDragState.card.fromCombinationArea;
 
           if (isFromCombination) {
-            // Remove card from combination area
-            setCombinationAreaCards((prev) =>
-              prev.filter((item) => item.id !== globalDragState.card.id)
-            );
+            // Card is already removed from combination area during drag start
+            // No need to remove again
 
             // Add card back to inventory
             const existingStack = inventory.find(
@@ -169,13 +165,15 @@ const CardStackingGame = () => {
                 )
               );
             } else {
-              // Add as new stack
+              // Add as new stack (clean the card first)
+              const { fromCombinationArea, dropX, dropY, ...cleanCard } =
+                globalDragState.card;
               const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
               setInventory((prev) => [
                 ...prev,
                 {
+                  ...cleanCard,
                   id: newId,
-                  type: globalDragState.card.type,
                   quantity: 1,
                 },
               ]);
@@ -237,9 +235,7 @@ const CardStackingGame = () => {
 
         if (isOverCombinationArea) {
           // Check if this is a card from combination area
-          const isFromCombination = combinationAreaCards.some(
-            (item) => item.id === globalDragState.cardId
-          );
+          const isFromCombination = globalDragState.card.fromCombinationArea;
 
           if (!isFromCombination) {
             // This is a card from inventory, move it to combination area
@@ -261,8 +257,31 @@ const CardStackingGame = () => {
               relativeY
             );
           } else {
-            // This will be handled by CombinationBox's positioning system
-            // Just clear the drag state - CombinationBox will handle repositioning
+            // This is a card from combination area being dropped back on combination area
+            // Calculate exact drop position and restore the card
+            const CONTAINER_BORDER = 2;
+            const relativeX =
+              e.clientX -
+              combRect.left -
+              globalDragState.offsetX -
+              CONTAINER_BORDER;
+            const relativeY =
+              e.clientY -
+              combRect.top -
+              globalDragState.offsetY -
+              CONTAINER_BORDER;
+
+            // Remove the flag and restore with new position
+            const { fromCombinationArea, ...cardToRestore } =
+              globalDragState.card;
+            setCombinationAreaCards((prev) => [
+              ...prev,
+              {
+                ...cardToRestore,
+                dropX: relativeX,
+                dropY: relativeY,
+              },
+            ]);
           }
           setGlobalDragState(null);
           return;
@@ -270,13 +289,13 @@ const CardStackingGame = () => {
       }
 
       // If not dropped on any valid area, restore the card appropriately
-      const isFromCombination = combinationAreaCards.some(
-        (item) => item.id === globalDragState.card.id
-      );
+      const isFromCombination = globalDragState.card.fromCombinationArea;
 
       if (isFromCombination) {
-        // Card from combination area dropped elsewhere - leave it in combination area
-        // No action needed, card stays where it was
+        // Card from combination area dropped elsewhere - restore it to combination area
+        // Remove the flag before restoring
+        const { fromCombinationArea, ...cardToRestore } = globalDragState.card;
+        setCombinationAreaCards((prev) => [...prev, cardToRestore]);
       } else {
         // Handle inventory cards dropped outside valid areas
         const wasRemovedFromInventory = !inventory.some(
