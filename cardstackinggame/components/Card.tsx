@@ -2,21 +2,17 @@ const Card = ({
   card,
   cardDatabase,
   onClick,
-  isSelected,
 }: {
   card: any;
   cardDatabase: any;
   onClick?: (card: any) => void;
-  isSelected?: boolean;
 }) => {
   const cardData = cardDatabase[card.type];
   const IconComponent = cardData.icon;
 
   return (
     <div
-      className={`w-24 h-32 bg-white border-2 rounded cursor-grab hover:shadow-md transition-all flex flex-col items-center justify-center relative select-none ${
-        isSelected ? "border-blue-500 border-4 bg-blue-50" : "border-gray-300"
-      }`}
+      className="w-24 h-32 bg-white border-2 border-gray-300 rounded cursor-grab hover:shadow-md transition-all flex flex-col items-center justify-center relative select-none"
       onClick={() => onClick && onClick(card)}
       draggable={false}
     >

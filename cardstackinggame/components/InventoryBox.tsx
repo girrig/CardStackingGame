@@ -140,7 +140,6 @@ const InventoryBox = ({
             >
               {/* Render cards */}
               {inventory.map((card, index) => {
-                const isSelected = heldCard && heldCard.id === card.id;
                 const isBeingDragged =
                   globalDragState && globalDragState.cardId === card.id;
                 const cardInfo = cardDatabase[card.type];
@@ -165,7 +164,6 @@ const InventoryBox = ({
                       card={card}
                       cardDatabase={cardDatabase}
                       onClick={handleCardClick}
-                      isSelected={isSelected}
                     />
                   </div>
                 );
