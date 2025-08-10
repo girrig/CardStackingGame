@@ -1,37 +1,30 @@
 "use client";
 
 import Card from "@/components/Card";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const InventoryBox = ({
+  inventoryAreaRef,
+  setGlobalDragState,
+  globalDragState,
   inventory,
-  setInventory,
   cardDatabase,
   heldCard,
   setHeldCard,
 }: {
+  inventoryAreaRef: React.RefObject<HTMLDivElement>;
+  globalDragState: any;
+  setGlobalDragState: any;
   inventory: any[];
   setInventory: any;
   cardDatabase: any;
   heldCard: any;
   setHeldCard: any;
 }) => {
-  // Drag and drop state
+  // Card positions for grid layout
   const [cardPositions, setCardPositions] = useState<
     Map<number, { x: number; y: number }>
   >(new Map());
-
-  // Tracks active dragging
-  const [dragState, setDragState] = useState<{
-    cardId: number;
-    startX: number;
-    startY: number;
-    offsetX: number;
-    offsetY: number;
-  } | null>(null);
-
-  // Hook for inventory area
-  const inventoryRef = useRef<HTMLDivElement>(null);
 
   // Inventory slot configuration
   const SLOT_WIDTH = 100; // w-24 (96px) + border-2 (4px) = 100px
@@ -70,113 +63,18 @@ const InventoryBox = ({
     });
   }, [inventory]);
 
-  // Document-level drag event listeners
-  useEffect(() => {
-    const handleDocumentMouseMove = (e: MouseEvent) => {
-      if (!dragState) return;
-
-      const deltaX = e.clientX - dragState.startX;
-      const deltaY = e.clientY - dragState.startY;
-
-      // Calculate new position without boundaries
-      const newX = dragState.offsetX + deltaX;
-      const newY = dragState.offsetY + deltaY;
-
-      setCardPositions(
-        (prev) =>
-          new Map(
-            prev.set(dragState.cardId, {
-              x: newX,
-              y: newY,
-            })
-          )
-      );
-    };
-
-    const handleDocumentMouseUp = () => {
-      if (dragState) {
-        const currentPosition = cardPositions.get(dragState.cardId);
-        if (currentPosition) {
-          // Find the nearest grid position
-          const col = Math.max(
-            0,
-            Math.min(
-              CARDS_PER_ROW - 1,
-              Math.round(
-                (currentPosition.x - SLOT_GAP) / (SLOT_WIDTH + SLOT_GAP)
-              )
-            )
-          );
-          const row = Math.max(
-            0,
-            Math.round(
-              (currentPosition.y - SLOT_GAP) / (SLOT_HEIGHT + SLOT_GAP)
-            )
-          );
-          const targetIndex = row * CARDS_PER_ROW + col;
-
-          // Find the card being dragged in inventory
-          const cardIndex = inventory.findIndex(
-            (card) => card.id === dragState.cardId
-          );
-
-          if (
-            cardIndex !== -1 &&
-            targetIndex !== cardIndex &&
-            targetIndex < inventory.length
-          ) {
-            // Reorder the inventory array
-            setInventory((prev) => {
-              const newInventory = [...prev];
-              const [movedCard] = newInventory.splice(cardIndex, 1);
-              newInventory.splice(targetIndex, 0, movedCard);
-              return newInventory;
-            });
-          } else {
-            // Snap back to original position
-            const originalIndex = inventory.findIndex(
-              (card) => card.id === dragState.cardId
-            );
-            if (originalIndex !== -1) {
-              setCardPositions(
-                (prev) =>
-                  new Map(
-                    prev.set(
-                      dragState.cardId,
-                      getCardGridPosition(originalIndex)
-                    )
-                  )
-              );
-            }
-          }
-        }
-      }
-      setDragState(null);
-    };
-
-    if (dragState) {
-      document.addEventListener("mousemove", handleDocumentMouseMove);
-      document.addEventListener("mouseup", handleDocumentMouseUp);
-
-      return () => {
-        document.removeEventListener("mousemove", handleDocumentMouseMove);
-        document.removeEventListener("mouseup", handleDocumentMouseUp);
-      };
-    }
-  }, [dragState, cardPositions, inventory, setInventory]);
-
   // Handle drag start
   const handleMouseDown = (e: React.MouseEvent, card: any) => {
     e.preventDefault();
 
-    const currentPosition = cardPositions.get(card.id)!;
-
-    setDragState({
+    // Set global drag state - centering will be handled by global system
+    setGlobalDragState({
       cardId: card.id,
+      card: card,
       startX: e.clientX,
       startY: e.clientY,
-      offsetX: currentPosition.x,
-      offsetY: currentPosition.y,
+      currentX: e.clientX,
+      currentY: e.clientY,
     });
   };
 
@@ -201,7 +99,7 @@ const InventoryBox = ({
             }}
           >
             <div
-              ref={inventoryRef}
+              ref={inventoryAreaRef}
               className="relative"
               style={{
                 height: containerHeight,
@@ -211,6 +109,8 @@ const InventoryBox = ({
               {/* Render cards */}
               {inventory.map((card, index) => {
                 const isSelected = heldCard && heldCard.id === card.id;
+                const isBeingDragged =
+                  globalDragState && globalDragState.cardId === card.id;
                 const cardInfo = cardDatabase[card.type];
                 if (!cardInfo) return null; // Skip rendering if card data not loaded yet
 
@@ -220,10 +120,12 @@ const InventoryBox = ({
                 return (
                   <div
                     key={`card-${card.id}-${index}`}
-                    className="absolute"
+                    className={`absolute ${
+                      isBeingDragged ? "opacity-0" : "opacity-100"
+                    }`}
                     style={{
                       transform: `translate(${position.x}px, ${position.y}px)`,
-                      zIndex: dragState?.cardId === card.id ? 1000 : 10,
+                      zIndex: 10,
                     }}
                     onMouseDown={(e) => handleMouseDown(e, card)}
                   >
