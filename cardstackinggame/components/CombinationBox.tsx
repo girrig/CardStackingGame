@@ -1,22 +1,21 @@
 "use client";
 
 import Card from "@/components/Card";
+import { initializeDragFromCombination } from "@/utils/dragUtils";
 import { useEffect, useState } from "react";
 
 const CombinationBox = ({
   combinationAreaRef,
   globalDragState,
   setGlobalDragState,
-  inventory,
   setInventory,
   cardDatabase,
   combinationAreaCards,
   setCombinationAreaCards,
 }: {
-  combinationAreaRef: React.RefObject<HTMLDivElement>;
+  combinationAreaRef: React.RefObject<HTMLDivElement | null>;
   globalDragState: any;
   setGlobalDragState: any;
-  inventory: any[];
   setInventory: any;
   cardDatabase: any;
   combinationAreaCards: any[];
@@ -33,7 +32,7 @@ const CombinationBox = ({
       const newMap = new Map(prev);
       let hasChanges = false;
 
-      combinationAreaCards.forEach((card, index) => {
+      combinationAreaCards.forEach((card) => {
         if (!newMap.has(card.id)) {
           let x, y;
 
@@ -104,28 +103,13 @@ const CombinationBox = ({
   const handleMouseDown = (e: React.MouseEvent, card: any) => {
     e.preventDefault();
 
-    // Calculate offset from mouse position to top-left of card
-    const cardElement = e.currentTarget as HTMLElement;
-    const cardRect = cardElement.getBoundingClientRect();
-    const offsetX = e.clientX - cardRect.left;
-    const offsetY = e.clientY - cardRect.top;
-
-    // Remove card from combination area during drag (like InventoryBox does)
-    setCombinationAreaCards((prev) =>
-      prev.filter((item) => item.id !== card.id)
+    const dragState = initializeDragFromCombination(
+      e,
+      card,
+      setCombinationAreaCards
     );
 
-    // Set global drag state for moving cards around combination area
-    setGlobalDragState({
-      cardId: card.id,
-      card: { ...card, fromCombinationArea: true },
-      startX: e.clientX,
-      startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-      offsetX: offsetX,
-      offsetY: offsetY,
-    });
+    setGlobalDragState(dragState);
   };
 
   // Clear Area - Return all cards to inventory
@@ -138,7 +122,7 @@ const CombinationBox = ({
     setCardPositions(new Map());
 
     // Then update inventory based on the snapshot
-    setInventory((prevInventory) => {
+    setInventory((prevInventory: any) => {
       const newInventory = [...prevInventory];
 
       cardsToReturn.forEach((card) => {

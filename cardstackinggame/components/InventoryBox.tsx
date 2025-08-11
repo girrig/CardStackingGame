@@ -1,6 +1,11 @@
 "use client";
 
 import Card from "@/components/Card";
+import {
+  calculateGridPosition,
+  initializeDragFromInventory,
+  INVENTORY_GRID_CONFIG,
+} from "@/utils/dragUtils";
 import { useEffect, useState } from "react";
 
 const InventoryBox = ({
@@ -10,55 +15,40 @@ const InventoryBox = ({
   inventory,
   setInventory,
   cardDatabase,
-  heldCard,
-  setHeldCard,
 }: {
-  inventoryAreaRef: React.RefObject<HTMLDivElement>;
+  inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
   globalDragState: any;
   setGlobalDragState: any;
   inventory: any[];
   setInventory: any;
   cardDatabase: any;
-  heldCard: any;
-  setHeldCard: any;
 }) => {
   // Card positions for grid layout
   const [cardPositions, setCardPositions] = useState<
     Map<number, { x: number; y: number }>
   >(new Map());
 
-  // Inventory slot configuration
-  const SLOT_WIDTH = 100; // w-24 (96px) + border-2 (4px) = 100px
-  const SLOT_HEIGHT = 132; // h-32 (128px) + border-2 (4px) = 132px
-  const SLOT_GAP = 8;
-
-  // Simple fixed grid layout
-  const CARDS_PER_ROW = 8;
   const FIXED_ROWS = 3;
-
-  // Track card positions
-  const getCardGridPosition = (cardIndex: number) => {
-    const row = Math.floor(cardIndex / CARDS_PER_ROW);
-    const col = cardIndex % CARDS_PER_ROW;
-
-    return {
-      x: SLOT_GAP + col * (SLOT_WIDTH + SLOT_GAP),
-      y: SLOT_GAP + row * (SLOT_HEIGHT + SLOT_GAP),
-    };
-  };
 
   // Calculate container dimensions
   const containerWidth =
-    2 * SLOT_GAP + CARDS_PER_ROW * SLOT_WIDTH + (CARDS_PER_ROW - 1) * SLOT_GAP;
+    2 * INVENTORY_GRID_CONFIG.slotGap +
+    INVENTORY_GRID_CONFIG.cardsPerRow * INVENTORY_GRID_CONFIG.slotWidth +
+    (INVENTORY_GRID_CONFIG.cardsPerRow - 1) * INVENTORY_GRID_CONFIG.slotGap;
   const containerHeight =
-    2 * SLOT_GAP + FIXED_ROWS * SLOT_HEIGHT + (FIXED_ROWS - 1) * SLOT_GAP;
+    2 * INVENTORY_GRID_CONFIG.slotGap +
+    FIXED_ROWS * INVENTORY_GRID_CONFIG.slotHeight +
+    (FIXED_ROWS - 1) * INVENTORY_GRID_CONFIG.slotGap;
 
   // Initialize card positions in a grid layout
   useEffect(() => {
     setCardPositions((prev) => {
       const newMap = new Map(prev);
       inventory.forEach((card, index) => {
-        newMap.set(card.id, getCardGridPosition(index));
+        newMap.set(
+          card.id,
+          calculateGridPosition(index, INVENTORY_GRID_CONFIG)
+        );
       });
       return newMap;
     });
@@ -68,54 +58,14 @@ const InventoryBox = ({
   const handleMouseDown = (e: React.MouseEvent, card: any) => {
     e.preventDefault();
 
-    // Calculate offset from mouse position to top-left of card
-    const cardElement = e.currentTarget as HTMLElement;
-    const cardRect = cardElement.getBoundingClientRect();
-    const offsetX = e.clientX - cardRect.left;
-    const offsetY = e.clientY - cardRect.top;
+    const { dragState } = initializeDragFromInventory(
+      e,
+      card,
+      inventory,
+      setInventory
+    );
 
-    let cardToDrag = card;
-
-    // If card has more than one copy, create a single card to drag and decrement the stack
-    if (card.quantity > 1) {
-      // Create a new card with quantity 1 for dragging
-      const newId = Math.max(...inventory.map((c) => c.id), 0) + 1;
-      cardToDrag = {
-        ...card,
-        id: newId,
-        quantity: 1,
-      };
-
-      // Immediately decrement the original stack
-      setInventory((prev) =>
-        prev.map((item) =>
-          item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
-        )
-      );
-    } else {
-      // For single cards, remove from inventory immediately
-      setInventory((prev) => prev.filter((item) => item.id !== card.id));
-    }
-
-    // Set global drag state with offset information
-    setGlobalDragState({
-      cardId: cardToDrag.id,
-      card: cardToDrag,
-      startX: e.clientX,
-      startY: e.clientY,
-      currentX: e.clientX,
-      currentY: e.clientY,
-      offsetX: offsetX,
-      offsetY: offsetY,
-    });
-  };
-
-  // Handle card selection (for combination slots)
-  const handleCardClick = (card: any) => {
-    if (card.quantity > 0) {
-      // Just select the card, don't deduct yet
-      setHeldCard(card);
-    }
+    setGlobalDragState(dragState);
   };
 
   return (
@@ -160,11 +110,7 @@ const InventoryBox = ({
                     }}
                     onMouseDown={(e) => handleMouseDown(e, card)}
                   >
-                    <Card
-                      card={card}
-                      cardDatabase={cardDatabase}
-                      onClick={handleCardClick}
-                    />
+                    <Card card={card} cardDatabase={cardDatabase} />
                   </div>
                 );
               })}

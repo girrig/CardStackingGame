@@ -5,6 +5,16 @@ import CombinationBox from "@/components/CombinationBox";
 import InventoryBox from "@/components/InventoryBox";
 import cardData from "@/data/cards.json";
 import recipeData from "@/data/recipes.json";
+import {
+  DragState,
+  DropZone,
+  detectDropZone,
+  handleDropToCombination,
+  handleDropToInventoryFromCombination,
+  handleInvalidDropRestore,
+  handleInventoryReorder,
+  restoreCombinationCardAtPosition,
+} from "@/utils/dragUtils";
 import { getIcon } from "@/utils/iconMap";
 import { useEffect, useRef, useState } from "react";
 
@@ -23,96 +33,19 @@ const CardStackingGame = () => {
   const [combinationAreaCards, setCombinationAreaCards] = useState([]);
 
   // Dragging
-  const [heldCard, setHeldCard] = useState(null);
-  const [globalDragState, setGlobalDragState] = useState<{
-    cardId: number;
-    card: any;
-    startX: number;
-    startY: number;
-    currentX: number;
-    currentY: number;
-    offsetX: number;
-    offsetY: number;
-  } | null>(null);
+  const [globalDragState, setGlobalDragState] = useState<DragState | null>(
+    null
+  );
 
   // Container Refs
   const inventoryAreaRef = useRef<HTMLDivElement>(null);
   const combinationAreaRef = useRef<HTMLDivElement>(null);
 
-  // Handle card drop to inventory (for reordering)
-  const handleCardDropToInventory = (
-    cardId: number,
-    dropX: number,
-    dropY: number
-  ) => {
-    if (!inventoryAreaRef.current) return;
-
-    const rect = inventoryAreaRef.current.getBoundingClientRect();
-    const relativeX = dropX - rect.left;
-    const relativeY = dropY - rect.top;
-
-    // Inventory slot configuration (matching InventoryBox)
-    const SLOT_WIDTH = 100;
-    const SLOT_HEIGHT = 132;
-    const SLOT_GAP = 8;
-    const CARDS_PER_ROW = 8;
-
-    // Convert to grid position
-    const col = Math.max(
-      0,
-      Math.min(
-        CARDS_PER_ROW - 1,
-        Math.round((relativeX - SLOT_GAP) / (SLOT_WIDTH + SLOT_GAP))
-      )
-    );
-    const row = Math.max(
-      0,
-      Math.round((relativeY - SLOT_GAP) / (SLOT_HEIGHT + SLOT_GAP))
-    );
-    const targetIndex = row * CARDS_PER_ROW + col;
-
-    // Find the card being dragged
-    const cardIndex = inventory.findIndex((card) => card.id === cardId);
-
-    if (
-      cardIndex !== -1 &&
-      targetIndex !== cardIndex &&
-      targetIndex < inventory.length
-    ) {
-      // Reorder the inventory array
-      setInventory((prev) => {
-        const newInventory = [...prev];
-        const [movedCard] = newInventory.splice(cardIndex, 1);
-        newInventory.splice(targetIndex, 0, movedCard);
-        return newInventory;
-      });
-    }
-  };
-
-  // Handle card drop to combination area
-  const handleCardDropToCombination = (
-    card: any,
-    dropX?: number,
-    dropY?: number
-  ) => {
-    // Add card to combination area
-    const newId =
-      Math.max(
-        ...combinationAreaCards.map((c) => c.id),
-        0,
-        ...inventory.map((i) => i.id),
-        card.id
-      ) + 1;
-
-    const newCard = {
-      ...card,
-      id: newId,
-      quantity: 1,
-      // Store the drop position if provided
-      ...(dropX !== undefined && dropY !== undefined && { dropX, dropY }),
-    };
-    setCombinationAreaCards((prev) => [...prev, newCard]);
-  };
+  // Define drop zones
+  const dropZones: DropZone[] = [
+    { ref: inventoryAreaRef, type: "inventory" },
+    { ref: combinationAreaRef, type: "combination" },
+  ];
 
   // Global mouse event handlers for cross-component dragging
   useEffect(() => {
@@ -133,199 +66,67 @@ const CardStackingGame = () => {
     const handleMouseUp = (e: MouseEvent) => {
       if (!globalDragState) return;
 
-      // Check if dropped on inventory area
-      if (inventoryAreaRef.current) {
-        const invRect = inventoryAreaRef.current.getBoundingClientRect();
-        const isOverInventoryArea =
-          e.clientX >= invRect.left &&
-          e.clientX <= invRect.right &&
-          e.clientY >= invRect.top &&
-          e.clientY <= invRect.bottom;
+      const dropZone = detectDropZone(e.clientX, e.clientY, dropZones);
+      const isFromCombination = globalDragState.source === "combination";
 
-        if (isOverInventoryArea) {
-          // Check if this card is from the combination area
-          const isFromCombination = globalDragState.card.fromCombinationArea;
-
+      if (dropZone) {
+        if (dropZone.type === "inventory") {
           if (isFromCombination) {
-            // Card is already removed from combination area during drag start
-            // No need to remove again
-
-            // Add card back to inventory
-            const existingStack = inventory.find(
-              (item) => item.type === globalDragState.card.type
-            );
-
-            if (existingStack) {
-              // Add to existing stack
-              setInventory((prev) =>
-                prev.map((item) =>
-                  item.type === globalDragState.card.type
-                    ? { ...item, quantity: item.quantity + 1 }
-                    : item
-                )
-              );
-            } else {
-              // Add as new stack (clean the card first)
-              const { fromCombinationArea, dropX, dropY, ...cleanCard } =
-                globalDragState.card;
-              const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
-              setInventory((prev) => [
-                ...prev,
-                {
-                  ...cleanCard,
-                  id: newId,
-                  quantity: 1,
-                },
-              ]);
-            }
-          } else {
-            // Check if this card was removed from inventory during drag start
-            const wasRemovedFromInventory = !inventory.some(
-              (item) => item.id === globalDragState.card.id
-            );
-
-            if (wasRemovedFromInventory) {
-              // Only restore if the card is not currently in combination area
-              const isNotInCombination = !combinationAreaCards.some(
-                (item) => item.id === globalDragState.card.id
-              );
-
-              if (isNotInCombination) {
-                // Find if there's an existing stack of the same type to add to
-                const existingStack = inventory.find(
-                  (item) => item.type === globalDragState.card.type
-                );
-
-                if (existingStack) {
-                  // Restore to existing stack
-                  setInventory((prev) =>
-                    prev.map((item) =>
-                      item.type === globalDragState.card.type
-                        ? { ...item, quantity: item.quantity + 1 }
-                        : item
-                    )
-                  );
-                } else {
-                  // Add back as a new single card
-                  setInventory((prev) => [...prev, globalDragState.card]);
-                }
-              }
-            } else {
-              // Handle normal inventory reordering for existing cards
-              handleCardDropToInventory(
-                globalDragState.cardId,
-                e.clientX,
-                e.clientY
-              );
-            }
-          }
-          setGlobalDragState(null);
-          return;
-        }
-      }
-
-      // Check if dropped on combination area
-      if (combinationAreaRef.current) {
-        const combRect = combinationAreaRef.current.getBoundingClientRect();
-        const isOverCombinationArea =
-          e.clientX >= combRect.left &&
-          e.clientX <= combRect.right &&
-          e.clientY >= combRect.top &&
-          e.clientY <= combRect.bottom;
-
-        if (isOverCombinationArea) {
-          // Check if this is a card from combination area
-          const isFromCombination = globalDragState.card.fromCombinationArea;
-
-          if (!isFromCombination) {
-            // This is a card from inventory, move it to combination area
-            // Calculate exact drop position relative to combination area using the offset
-            const CONTAINER_BORDER = 2; // border-2 class = 2px border
-            const relativeX =
-              e.clientX -
-              combRect.left -
-              globalDragState.offsetX -
-              CONTAINER_BORDER;
-            const relativeY =
-              e.clientY -
-              combRect.top -
-              globalDragState.offsetY -
-              CONTAINER_BORDER;
-            handleCardDropToCombination(
+            // Card from combination area dropped on inventory
+            handleDropToInventoryFromCombination(
               globalDragState.card,
-              relativeX,
-              relativeY
+              inventory,
+              setInventory
             );
           } else {
-            // This is a card from combination area being dropped back on combination area
-            // Calculate exact drop position and restore the card
-            const CONTAINER_BORDER = 2;
-            const relativeX =
-              e.clientX -
-              combRect.left -
-              globalDragState.offsetX -
-              CONTAINER_BORDER;
-            const relativeY =
-              e.clientY -
-              combRect.top -
-              globalDragState.offsetY -
-              CONTAINER_BORDER;
-
-            // Remove the flag and restore with new position
-            const { fromCombinationArea, ...cardToRestore } =
-              globalDragState.card;
-            setCombinationAreaCards((prev) => [
-              ...prev,
-              {
-                ...cardToRestore,
-                dropX: relativeX,
-                dropY: relativeY,
-              },
-            ]);
+            // Handle inventory reordering
+            handleInventoryReorder(
+              globalDragState,
+              e.clientX,
+              e.clientY,
+              inventory,
+              setInventory,
+              inventoryAreaRef
+            );
           }
-          setGlobalDragState(null);
-          return;
+        } else if (dropZone.type === "combination") {
+          if (!isFromCombination) {
+            // Card from inventory dropped on combination area
+            const rect = combinationAreaRef.current!.getBoundingClientRect();
+            handleDropToCombination(
+              globalDragState.card,
+              e.clientX,
+              e.clientY,
+              rect,
+              globalDragState.offsetX,
+              globalDragState.offsetY,
+              combinationAreaCards,
+              setCombinationAreaCards,
+              inventory
+            );
+          } else {
+            // Card from combination area dropped back on combination area
+            const rect = combinationAreaRef.current!.getBoundingClientRect();
+            restoreCombinationCardAtPosition(
+              globalDragState.card,
+              e.clientX,
+              e.clientY,
+              rect,
+              globalDragState.offsetX,
+              globalDragState.offsetY,
+              setCombinationAreaCards
+            );
+          }
         }
-      }
-
-      // If not dropped on any valid area, restore the card appropriately
-      const isFromCombination = globalDragState.card.fromCombinationArea;
-
-      if (isFromCombination) {
-        // Card from combination area dropped elsewhere - restore it to combination area
-        // Remove the flag before restoring
-        const { fromCombinationArea, ...cardToRestore } = globalDragState.card;
-        setCombinationAreaCards((prev) => [...prev, cardToRestore]);
       } else {
-        // Handle inventory cards dropped outside valid areas
-        const wasRemovedFromInventory = !inventory.some(
-          (item) => item.id === globalDragState.card.id
+        // Invalid drop - Restore card to original location
+        handleInvalidDropRestore(
+          globalDragState,
+          inventory,
+          setInventory,
+          combinationAreaCards,
+          setCombinationAreaCards
         );
-        const isNotInCombination = !combinationAreaCards.some(
-          (item) => item.id === globalDragState.card.id
-        );
-
-        if (wasRemovedFromInventory && isNotInCombination) {
-          // Only restore if the card is not currently in combination area
-          // Find if there's an existing stack of the same type to add to
-          const existingStack = inventory.find(
-            (item) => item.type === globalDragState.card.type
-          );
-
-          if (existingStack) {
-            // Restore to existing stack
-            setInventory((prev) =>
-              prev.map((item) =>
-                item.type === globalDragState.card.type
-                  ? { ...item, quantity: item.quantity + 1 }
-                  : item
-              )
-            );
-          } else {
-            // Add back as a new single card
-            setInventory((prev) => [...prev, globalDragState.card]);
-          }
-        }
       }
 
       setGlobalDragState(null);
@@ -368,15 +169,12 @@ const CardStackingGame = () => {
             inventory={inventory}
             setInventory={setInventory}
             cardDatabase={cardDatabase}
-            heldCard={heldCard}
-            setHeldCard={setHeldCard}
           />
 
           <CombinationBox
             combinationAreaRef={combinationAreaRef}
             globalDragState={globalDragState}
             setGlobalDragState={setGlobalDragState}
-            inventory={inventory}
             setInventory={setInventory}
             cardDatabase={cardDatabase}
             combinationAreaCards={combinationAreaCards}
