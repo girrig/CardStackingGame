@@ -26,8 +26,8 @@ const CardStackingGame = () => {
 
   // Initial inventory
   const [inventory, setInventory] = useState<CardType[]>([
-    { id: 1, type: "test", quantity: 5 },
-    { id: 2, type: "tester", quantity: 1 },
+    { id: 1, type: "test", quantity: 5, location: "inventory" },
+    { id: 2, type: "tester", quantity: 1, location: "inventory" },
   ]);
 
   // Combination Area
@@ -70,7 +70,7 @@ const CardStackingGame = () => {
       if (!globalDragState) return;
 
       const dropZone = detectDropZone(e.clientX, e.clientY, dropZones);
-      const isFromCombination = globalDragState.source === "combination";
+      const isFromCombination = globalDragState.card.location === "combination";
 
       if (dropZone) {
         if (dropZone.type === "inventory") {

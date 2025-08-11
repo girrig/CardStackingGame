@@ -9,7 +9,6 @@ export interface DragState {
   currentY: number;
   offsetX: number;
   offsetY: number;
-  source: "inventory" | "combination";
 }
 
 export interface DropZone {
@@ -113,6 +112,7 @@ export const initializeDragFromInventory = (
       ...card,
       id: newId,
       quantity: 1,
+      location: "inventory",
     };
 
     setInventory((prev: Card[]) =>
@@ -134,7 +134,6 @@ export const initializeDragFromInventory = (
     currentY: e.clientY,
     offsetX,
     offsetY,
-    source: "inventory",
   };
 
   return { dragState, cardToDrag };
@@ -156,14 +155,13 @@ export const initializeDragFromCombination = (
 
   return {
     cardId: card.id,
-    card: { ...card, fromCombinationArea: true },
+    card,
     startX: e.clientX,
     startY: e.clientY,
     currentX: e.clientX,
     currentY: e.clientY,
     offsetX,
     offsetY,
-    source: "combination",
   };
 };
 
@@ -277,6 +275,7 @@ export const handleDropToCombination = (
     ...card,
     id: newId,
     quantity: 1,
+    location: "combination",
     dropX: position.x,
     dropY: position.y,
   };
@@ -303,7 +302,7 @@ export const handleDropToInventoryFromCombination = (
     );
   } else {
     // Create a new card stack
-    const { fromCombinationArea, dropX, dropY, ...cleanCard } = card;
+    const { dropX, dropY, ...cleanCard } = card;
     const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
     setInventory((prev: Card[]) => [
       ...prev,
@@ -311,6 +310,7 @@ export const handleDropToInventoryFromCombination = (
         ...cleanCard,
         id: newId,
         quantity: 1,
+        location: "inventory",
       },
     ]);
   }
@@ -323,9 +323,8 @@ export const handleInvalidDropRestore = (
   combinationAreaCards: any[],
   setCombinationAreaCards: any
 ) => {
-  if (dragState.source === "combination") {
-    const { fromCombinationArea, ...cardToRestore } = dragState.card;
-    setCombinationAreaCards((prev: Card[]) => [...prev, cardToRestore]);
+  if (dragState.card.location === "combination") {
+    setCombinationAreaCards((prev: Card[]) => [...prev, dragState.card]);
   } else {
     const wasRemovedFromInventory = !inventory.some(
       (item) => item.id === dragState.card.id
@@ -371,11 +370,10 @@ export const restoreCombinationCardAtPosition = (
     offsetY
   );
 
-  const { fromCombinationArea, ...cardToRestore } = card;
   setCombinationAreaCards((prev: Card[]) => [
     ...prev,
     {
-      ...cardToRestore,
+      ...card,
       dropX: position.x,
       dropY: position.y,
     },
