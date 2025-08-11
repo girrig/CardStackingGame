@@ -2,12 +2,12 @@
 
 import Card from "@/components/Card";
 import { Card as CardType } from "@/types/card";
+import { DragState } from "@/utils/dragUtils";
 import {
   calculateGridPosition,
-  DragState,
   initializeDragFromInventory,
   INVENTORY_GRID_CONFIG,
-} from "@/utils/dragUtils";
+} from "@/utils/inventoryUtils";
 import { useEffect, useState } from "react";
 
 const InventoryBox = ({

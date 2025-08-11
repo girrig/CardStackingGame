@@ -2,7 +2,8 @@
 
 import Card from "@/components/Card";
 import { Card as CardType } from "@/types/card";
-import { DragState, initializeDragFromCombination } from "@/utils/dragUtils";
+import { initializeDragFromCombination } from "@/utils/combinationUtils";
+import { DragState } from "@/utils/dragUtils";
 import { useEffect, useState } from "react";
 
 const CombinationBox = ({

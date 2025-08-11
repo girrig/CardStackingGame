@@ -7,16 +7,20 @@ import cardData from "@/data/cards.json";
 import recipeData from "@/data/recipes.json";
 import { Card as CardType } from "@/types/card";
 import {
+  handleDropToCombination,
+  restoreCombinationCardAtPosition,
+} from "@/utils/combinationUtils";
+import {
   DragState,
   DropZone,
   detectDropZone,
-  handleDropToCombination,
-  handleDropToInventoryFromCombination,
   handleInvalidDropRestore,
-  handleInventoryReorder,
-  restoreCombinationCardAtPosition,
 } from "@/utils/dragUtils";
 import { getIcon } from "@/utils/iconMap";
+import {
+  handleDropToInventoryFromCombination,
+  handleInventoryReorder,
+} from "@/utils/inventoryUtils";
 import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
