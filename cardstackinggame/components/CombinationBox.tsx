@@ -1,7 +1,8 @@
 "use client";
 
 import Card from "@/components/Card";
-import { initializeDragFromCombination } from "@/utils/dragUtils";
+import { Card as CardType } from "@/types/card";
+import { DragState, initializeDragFromCombination } from "@/utils/dragUtils";
 import { useEffect, useState } from "react";
 
 const CombinationBox = ({
@@ -14,12 +15,16 @@ const CombinationBox = ({
   setCombinationAreaCards,
 }: {
   combinationAreaRef: React.RefObject<HTMLDivElement | null>;
-  globalDragState: any;
-  setGlobalDragState: any;
-  setInventory: any;
+  globalDragState: DragState | null;
+  setGlobalDragState: (state: DragState | null) => void;
+  setInventory: (
+    inventory: CardType[] | ((prev: CardType[]) => CardType[])
+  ) => void;
   cardDatabase: any;
-  combinationAreaCards: any[];
-  setCombinationAreaCards: any;
+  combinationAreaCards: CardType[];
+  setCombinationAreaCards: (
+    cards: CardType[] | ((prev: CardType[]) => CardType[])
+  ) => void;
 }) => {
   // Card positions
   const [cardPositions, setCardPositions] = useState<
@@ -100,7 +105,7 @@ const CombinationBox = ({
   }, [globalDragState, combinationAreaCards]);
 
   // Handle mouse down for dragging cards within combination area
-  const handleMouseDown = (e: React.MouseEvent, card: any) => {
+  const handleMouseDown = (e: React.MouseEvent, card: CardType) => {
     e.preventDefault();
 
     const dragState = initializeDragFromCombination(
@@ -122,7 +127,7 @@ const CombinationBox = ({
     setCardPositions(new Map());
 
     // Then update inventory based on the snapshot
-    setInventory((prevInventory: any) => {
+    setInventory((prevInventory: CardType[]) => {
       const newInventory = [...prevInventory];
 
       cardsToReturn.forEach((card) => {

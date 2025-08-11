@@ -1,6 +1,8 @@
+import { Card } from "@/types/card";
+
 export interface DragState {
   cardId: number;
-  card: any;
+  card: Card;
   startX: number;
   startY: number;
   currentX: number;
@@ -93,10 +95,10 @@ export const calculateRelativePosition = (
 
 export const initializeDragFromInventory = (
   e: React.MouseEvent,
-  card: any,
-  inventory: any[],
-  setInventory: any
-): { dragState: DragState; cardToDrag: any } => {
+  card: Card,
+  inventory: Card[],
+  setInventory: (inventory: Card[] | ((prev: Card[]) => Card[])) => void
+): { dragState: DragState; cardToDrag: Card } => {
   const cardElement = e.currentTarget as HTMLElement;
   const cardRect = cardElement.getBoundingClientRect();
   const offsetX = e.clientX - cardRect.left;
@@ -113,14 +115,14 @@ export const initializeDragFromInventory = (
       quantity: 1,
     };
 
-    setInventory((prev: any[]) =>
+    setInventory((prev: Card[]) =>
       prev.map((item) =>
         item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
       )
     );
   } else {
     // Move just the single card
-    setInventory((prev: any[]) => prev.filter((item) => item.id !== card.id));
+    setInventory((prev: Card[]) => prev.filter((item) => item.id !== card.id));
   }
 
   const dragState: DragState = {
@@ -140,15 +142,15 @@ export const initializeDragFromInventory = (
 
 export const initializeDragFromCombination = (
   e: React.MouseEvent,
-  card: any,
-  setCombinationAreaCards: any
+  card: Card,
+  setCombinationAreaCards: (cards: Card[] | ((prev: Card[]) => Card[])) => void
 ): DragState => {
   const cardElement = e.currentTarget as HTMLElement;
   const cardRect = cardElement.getBoundingClientRect();
   const offsetX = e.clientX - cardRect.left;
   const offsetY = e.clientY - cardRect.top;
 
-  setCombinationAreaCards((prev: any[]) =>
+  setCombinationAreaCards((prev: Card[]) =>
     prev.filter((item) => item.id !== card.id)
   );
 
@@ -210,7 +212,7 @@ export const handleInventoryReorder = (
   if (cardIndex !== -1) {
     // Card still exists in inventory, do normal reordering
     if (targetIndex !== cardIndex && targetIndex < inventory.length) {
-      setInventory((prev: any[]) => {
+      setInventory((prev: Card[]) => {
         const newInventory = [...prev];
         const [movedCard] = newInventory.splice(cardIndex, 1);
         newInventory.splice(targetIndex, 0, movedCard);
@@ -225,7 +227,7 @@ export const handleInventoryReorder = (
 
     if (existingStack && dragState.card.quantity === 1) {
       // Add back to existing stack
-      setInventory((prev: any[]) =>
+      setInventory((prev: Card[]) =>
         prev.map((item) =>
           item.type === dragState.card.type
             ? { ...item, quantity: item.quantity + 1 }
@@ -234,7 +236,7 @@ export const handleInventoryReorder = (
       );
     } else {
       // Insert the card at the target position
-      setInventory((prev: any[]) => {
+      setInventory((prev: Card[]) => {
         const newInventory = [...prev];
         const clampedIndex = Math.min(targetIndex, newInventory.length);
         newInventory.splice(clampedIndex, 0, dragState.card);
@@ -279,7 +281,7 @@ export const handleDropToCombination = (
     dropY: position.y,
   };
 
-  setCombinationAreaCards((prev: any[]) => [...prev, newCard]);
+  setCombinationAreaCards((prev: Card[]) => [...prev, newCard]);
 };
 
 export const handleDropToInventoryFromCombination = (
@@ -292,7 +294,7 @@ export const handleDropToInventoryFromCombination = (
 
   if (existingStack) {
     // Add to existing card stack
-    setInventory((prev: any[]) =>
+    setInventory((prev: Card[]) =>
       prev.map((item) =>
         item.type === card.type
           ? { ...item, quantity: item.quantity + 1 }
@@ -303,7 +305,7 @@ export const handleDropToInventoryFromCombination = (
     // Create a new card stack
     const { fromCombinationArea, dropX, dropY, ...cleanCard } = card;
     const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
-    setInventory((prev: any[]) => [
+    setInventory((prev: Card[]) => [
       ...prev,
       {
         ...cleanCard,
@@ -323,7 +325,7 @@ export const handleInvalidDropRestore = (
 ) => {
   if (dragState.source === "combination") {
     const { fromCombinationArea, ...cardToRestore } = dragState.card;
-    setCombinationAreaCards((prev: any[]) => [...prev, cardToRestore]);
+    setCombinationAreaCards((prev: Card[]) => [...prev, cardToRestore]);
   } else {
     const wasRemovedFromInventory = !inventory.some(
       (item) => item.id === dragState.card.id
@@ -338,7 +340,7 @@ export const handleInvalidDropRestore = (
       );
 
       if (existingStack) {
-        setInventory((prev: any[]) =>
+        setInventory((prev: Card[]) =>
           prev.map((item) =>
             item.type === dragState.card.type
               ? { ...item, quantity: item.quantity + 1 }
@@ -346,7 +348,7 @@ export const handleInvalidDropRestore = (
           )
         );
       } else {
-        setInventory((prev: any[]) => [...prev, dragState.card]);
+        setInventory((prev: Card[]) => [...prev, dragState.card]);
       }
     }
   }
@@ -370,7 +372,7 @@ export const restoreCombinationCardAtPosition = (
   );
 
   const { fromCombinationArea, ...cardToRestore } = card;
-  setCombinationAreaCards((prev: any[]) => [
+  setCombinationAreaCards((prev: Card[]) => [
     ...prev,
     {
       ...cardToRestore,

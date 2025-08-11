@@ -1,11 +1,13 @@
+import { Card as CardType } from "@/types/card";
+
 const Card = ({
   card,
   cardDatabase,
   onClick,
 }: {
-  card: any;
+  card: CardType;
   cardDatabase: any;
-  onClick?: (card: any) => void;
+  onClick?: (card: CardType) => void;
 }) => {
   const cardData = cardDatabase[card.type];
   const IconComponent = cardData.icon;

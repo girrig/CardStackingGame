@@ -1,8 +1,10 @@
 "use client";
 
 import Card from "@/components/Card";
+import { Card as CardType } from "@/types/card";
 import {
   calculateGridPosition,
+  DragState,
   initializeDragFromInventory,
   INVENTORY_GRID_CONFIG,
 } from "@/utils/dragUtils";
@@ -17,10 +19,12 @@ const InventoryBox = ({
   cardDatabase,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
-  globalDragState: any;
-  setGlobalDragState: any;
-  inventory: any[];
-  setInventory: any;
+  globalDragState: DragState | null;
+  setGlobalDragState: (state: DragState | null) => void;
+  inventory: CardType[];
+  setInventory: (
+    inventory: CardType[] | ((prev: CardType[]) => CardType[])
+  ) => void;
   cardDatabase: any;
 }) => {
   // Card positions for grid layout
@@ -55,7 +59,7 @@ const InventoryBox = ({
   }, [inventory]);
 
   // Handle drag start
-  const handleMouseDown = (e: React.MouseEvent, card: any) => {
+  const handleMouseDown = (e: React.MouseEvent, card: CardType) => {
     e.preventDefault();
 
     const { dragState } = initializeDragFromInventory(

@@ -5,6 +5,7 @@ import CombinationBox from "@/components/CombinationBox";
 import InventoryBox from "@/components/InventoryBox";
 import cardData from "@/data/cards.json";
 import recipeData from "@/data/recipes.json";
+import { Card as CardType } from "@/types/card";
 import {
   DragState,
   DropZone,
@@ -24,13 +25,15 @@ const CardStackingGame = () => {
   const [recipeDatabase, setRecipeDatabase] = useState<any[]>([]);
 
   // Initial inventory
-  const [inventory, setInventory] = useState([
+  const [inventory, setInventory] = useState<CardType[]>([
     { id: 1, type: "test", quantity: 5 },
     { id: 2, type: "tester", quantity: 1 },
   ]);
 
   // Combination Area
-  const [combinationAreaCards, setCombinationAreaCards] = useState([]);
+  const [combinationAreaCards, setCombinationAreaCards] = useState<CardType[]>(
+    []
+  );
 
   // Dragging
   const [globalDragState, setGlobalDragState] = useState<DragState | null>(
