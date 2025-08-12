@@ -163,10 +163,6 @@ const CombinationBox = ({
   return (
     <div className="flex-1 flex flex-col">
       <div className="bg-white border border-gray-200 rounded-lg p-6 h-full flex flex-col">
-        <h2 className="text-xl font-medium text-gray-900 mb-6">
-          Combination Area
-        </h2>
-
         {/* Combination Area */}
         <div
           ref={combinationAreaRef}

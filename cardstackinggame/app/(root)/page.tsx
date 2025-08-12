@@ -157,10 +157,6 @@ const CardStackingGame = () => {
   return (
     <div className="h-screen bg-gray-50 p-4">
       <div className="w-full h-full flex flex-col">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-4">
-          Card Stacking Game
-        </h1>
-
         <div className="flex gap-4 flex-1 min-h-0">
           <div className="w-3/4">
             <InventoryBox
