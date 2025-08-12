@@ -9,12 +9,60 @@ export const INVENTORY_GRID_CONFIG: GridConfig = {
   containerBorder: 2,
 };
 
+// Calculate optimal grid dimensions based on container size
+export const calculateOptimalGridSize = (
+  containerWidth: number,
+  containerHeight: number,
+  config: GridConfig
+): {
+  cols: number;
+  rows: number;
+  totalSlots: number;
+  actualWidth: number;
+  actualHeight: number;
+} => {
+  // Calculate how many cards can fit horizontally and vertically
+  // For columns: containerWidth = 2*slotGap + cols*slotWidth + (cols-1)*slotGap
+  // Simplified: containerWidth = slotGap + cols*(slotWidth + slotGap)
+  // Solving for cols: cols = (containerWidth - slotGap) / (slotWidth + slotGap)
+  const maxCols = Math.floor(
+    (containerWidth - config.slotGap) / (config.slotWidth + config.slotGap)
+  );
+  const maxRows = Math.floor(
+    (containerHeight - config.slotGap) / (config.slotHeight + config.slotGap)
+  );
+
+  // Ensure minimum of 1x1 grid
+  const cols = Math.max(1, maxCols);
+  const rows = Math.max(1, maxRows);
+
+  // Calculate the actual dimensions that will use the maximum space
+  const actualWidth =
+    2 * config.slotGap + cols * config.slotWidth + (cols - 1) * config.slotGap;
+  const actualHeight =
+    2 * config.slotGap + rows * config.slotHeight + (rows - 1) * config.slotGap;
+
+  return {
+    cols,
+    rows,
+    totalSlots: cols * rows,
+    actualWidth,
+    actualHeight,
+  };
+};
+
+// Sort cards by quantity (highest to lowest)
+export const sortCardsByQuantity = (cards: Card[]): Card[] => {
+  return [...cards].sort((a, b) => b.quantity - a.quantity);
+};
+
 export const calculateGridPosition = (
   cardIndex: number,
+  cols: number,
   config: GridConfig
 ) => {
-  const row = Math.floor(cardIndex / config.cardsPerRow);
-  const col = cardIndex % config.cardsPerRow;
+  const row = Math.floor(cardIndex / cols);
+  const col = cardIndex % cols;
 
   return {
     x: config.slotGap + col * (config.slotWidth + config.slotGap),
@@ -104,59 +152,26 @@ export const initializeDragFromInventory = (
 
 export const handleInventoryReorder = (
   dragState: DragState,
-  dropX: number,
-  dropY: number,
-  inventory: any[],
-  setInventory: any,
-  inventoryAreaRef: React.RefObject<HTMLDivElement | null>
+  inventory: Card[],
+  setInventory: (inventory: Card[] | ((prev: Card[]) => Card[])) => void
 ) => {
-  if (!inventoryAreaRef.current) return;
-
-  const rect = inventoryAreaRef.current.getBoundingClientRect();
-  const targetIndex = calculateDropIndex(
-    dropX,
-    dropY,
-    rect,
-    INVENTORY_GRID_CONFIG
+  // Just restore the card to its proper sorted position
+  const existingStack = inventory.find(
+    (item) => item.type === dragState.card.type
   );
 
-  // Check if the card was removed from inventory during drag start
-  const cardIndex = inventory.findIndex((card) => card.id === dragState.cardId);
-
-  if (cardIndex !== -1) {
-    // Card still exists in inventory, do normal reordering
-    if (targetIndex !== cardIndex && targetIndex < inventory.length) {
-      setInventory((prev: Card[]) => {
-        const newInventory = [...prev];
-        const [movedCard] = newInventory.splice(cardIndex, 1);
-        newInventory.splice(targetIndex, 0, movedCard);
-        return newInventory;
-      });
-    }
-  } else {
-    // Card was removed during drag start, restore it at the target position
-    const existingStack = inventory.find(
-      (item) => item.type === dragState.card.type
+  if (existingStack && dragState.card.quantity === 1) {
+    // Add back to existing stack
+    setInventory((prev: Card[]) =>
+      prev.map((item) =>
+        item.type === dragState.card.type
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      )
     );
-
-    if (existingStack && dragState.card.quantity === 1) {
-      // Add back to existing stack
-      setInventory((prev: Card[]) =>
-        prev.map((item) =>
-          item.type === dragState.card.type
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        )
-      );
-    } else {
-      // Insert the card at the target position
-      setInventory((prev: Card[]) => {
-        const newInventory = [...prev];
-        const clampedIndex = Math.min(targetIndex, newInventory.length);
-        newInventory.splice(clampedIndex, 0, dragState.card);
-        return newInventory;
-      });
-    }
+  } else {
+    // Add card back to inventory (it will be sorted automatically)
+    setInventory((prev: Card[]) => [...prev, dragState.card]);
   }
 };
 

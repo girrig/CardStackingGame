@@ -87,14 +87,7 @@ const CardStackingGame = () => {
             );
           } else {
             // Handle inventory reordering
-            handleInventoryReorder(
-              globalDragState,
-              e.clientX,
-              e.clientY,
-              inventory,
-              setInventory,
-              inventoryAreaRef
-            );
+            handleInventoryReorder(globalDragState, inventory, setInventory);
           }
         } else if (dropZone.type === "combination") {
           if (!isFromCombination) {
@@ -168,25 +161,29 @@ const CardStackingGame = () => {
           Card Stacking Game
         </h1>
 
-        <div className="flex gap-8">
-          <InventoryBox
-            inventoryAreaRef={inventoryAreaRef}
-            setGlobalDragState={setGlobalDragState}
-            globalDragState={globalDragState}
-            inventory={inventory}
-            setInventory={setInventory}
-            cardDatabase={cardDatabase}
-          />
+        <div className="flex gap-8 h-[calc(100vh-200px)]">
+          <div className="w-1/2">
+            <InventoryBox
+              inventoryAreaRef={inventoryAreaRef}
+              setGlobalDragState={setGlobalDragState}
+              globalDragState={globalDragState}
+              inventory={inventory}
+              setInventory={setInventory}
+              cardDatabase={cardDatabase}
+            />
+          </div>
 
-          <CombinationBox
-            combinationAreaRef={combinationAreaRef}
-            globalDragState={globalDragState}
-            setGlobalDragState={setGlobalDragState}
-            setInventory={setInventory}
-            cardDatabase={cardDatabase}
-            combinationAreaCards={combinationAreaCards}
-            setCombinationAreaCards={setCombinationAreaCards}
-          />
+          <div className="w-1/2">
+            <CombinationBox
+              combinationAreaRef={combinationAreaRef}
+              globalDragState={globalDragState}
+              setGlobalDragState={setGlobalDragState}
+              setInventory={setInventory}
+              cardDatabase={cardDatabase}
+              combinationAreaCards={combinationAreaCards}
+              setCombinationAreaCards={setCombinationAreaCards}
+            />
+          </div>
         </div>
 
         {/* Floating drag preview card */}
