@@ -44,9 +44,9 @@ const InventoryBox = ({
       if (componentRef.current) {
         const rect = componentRef.current.getBoundingClientRect();
 
-        // Subtract padding and space for title
-        const availableWidth = rect.width - 48; // 24px padding each side
-        const availableHeight = rect.height - 120; // Title + spacing
+        // Subtract padding (24px each side)
+        const availableWidth = rect.width - 48;
+        const availableHeight = rect.height - 48;
 
         // Calculate minimum dimensions for a usable 2x1 grid
         const minWidth =
@@ -122,7 +122,6 @@ const InventoryBox = ({
   return (
     <div ref={componentRef} className="w-full h-full">
       <div className="bg-white border border-gray-200 rounded-lg p-6 h-full flex flex-col">
-        <h2 className="text-xl font-medium text-gray-900 mb-6">Inventory</h2>
         <div className="flex-1 flex justify-center items-center">
           <div
             className="relative bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden"

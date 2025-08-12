@@ -2,7 +2,7 @@
 
 import Card from "@/components/Card";
 import CombinationBox from "@/components/CombinationBox";
-import InventoryBox from "@/components/InventoryBox";
+import TabbedComponent from "@/components/TabbedComponent";
 import cardData from "@/data/cards.json";
 import recipeData from "@/data/recipes.json";
 import { Card as CardType } from "@/types/card";
@@ -159,7 +159,7 @@ const CardStackingGame = () => {
       <div className="w-full h-full flex flex-col">
         <div className="flex gap-4 flex-1 min-h-0">
           <div className="w-3/4">
-            <InventoryBox
+            <TabbedComponent
               inventoryAreaRef={inventoryAreaRef}
               setGlobalDragState={setGlobalDragState}
               globalDragState={globalDragState}
