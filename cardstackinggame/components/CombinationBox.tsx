@@ -161,8 +161,8 @@ const CombinationBox = ({
   };
 
   return (
-    <div className="flex-1">
-      <div className="bg-white border border-gray-200 rounded-lg p-6 h-full">
+    <div className="flex-1 flex flex-col">
+      <div className="bg-white border border-gray-200 rounded-lg p-6 h-full flex flex-col">
         <h2 className="text-xl font-medium text-gray-900 mb-6">
           Combination Area
         </h2>
@@ -170,7 +170,7 @@ const CombinationBox = ({
         {/* Combination Area */}
         <div
           ref={combinationAreaRef}
-          className="w-full min-h-96 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 relative overflow-hidden"
+          className="w-full flex-1 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 relative overflow-hidden"
         >
           {combinationAreaCards.length === 0 ? (
             <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg p-4">

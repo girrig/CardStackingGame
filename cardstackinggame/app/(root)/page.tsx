@@ -155,14 +155,14 @@ const CardStackingGame = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-semibold text-gray-900 mb-8">
+    <div className="h-screen bg-gray-50 p-4">
+      <div className="w-full h-full flex flex-col">
+        <h1 className="text-3xl font-semibold text-gray-900 mb-4">
           Card Stacking Game
         </h1>
 
-        <div className="flex gap-8 h-[calc(100vh-200px)]">
-          <div className="w-1/2">
+        <div className="flex gap-4 flex-1 min-h-0">
+          <div className="w-3/4">
             <InventoryBox
               inventoryAreaRef={inventoryAreaRef}
               setGlobalDragState={setGlobalDragState}
@@ -173,7 +173,7 @@ const CardStackingGame = () => {
             />
           </div>
 
-          <div className="w-1/2">
+          <div className="w-1/4 flex flex-col">
             <CombinationBox
               combinationAreaRef={combinationAreaRef}
               globalDragState={globalDragState}
