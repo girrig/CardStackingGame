@@ -63,11 +63,11 @@ export const handleInvalidDropRestore = (
     );
 
     if (wasRemovedFromInventory && isNotInCombination) {
-      const existingStack = inventory.find(
+      const existingPile = inventory.find(
         (item) => item.type === dragState.card.type
       );
 
-      if (existingStack) {
+      if (existingPile) {
         setInventory((prev: Card[]) =>
           prev.map((item) =>
             item.type === dragState.card.type

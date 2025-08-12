@@ -156,12 +156,12 @@ export const handleInventoryReorder = (
   setInventory: (inventory: Card[] | ((prev: Card[]) => Card[])) => void
 ) => {
   // Just restore the card to its proper sorted position
-  const existingStack = inventory.find(
+  const existingPile = inventory.find(
     (item) => item.type === dragState.card.type
   );
 
-  if (existingStack && dragState.card.quantity === 1) {
-    // Add back to existing stack
+  if (existingPile && dragState.card.quantity === 1) {
+    // Add back to existing pile
     setInventory((prev: Card[]) =>
       prev.map((item) =>
         item.type === dragState.card.type
@@ -180,11 +180,11 @@ export const handleDropToInventoryFromCombination = (
   inventory: any[],
   setInventory: any
 ) => {
-  // Check for existing card stack
-  const existingStack = inventory.find((item) => item.type === card.type);
+  // Check for existing card pile
+  const existingPile = inventory.find((item) => item.type === card.type);
 
-  if (existingStack) {
-    // Add to existing card stack
+  if (existingPile) {
+    // Add to existing card pile
     setInventory((prev: Card[]) =>
       prev.map((item) =>
         item.type === card.type
@@ -193,7 +193,7 @@ export const handleDropToInventoryFromCombination = (
       )
     );
   } else {
-    // Create a new card stack
+    // Create a new card pile
     const { dropX, dropY, ...cleanCard } = card;
     const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
     setInventory((prev: Card[]) => [
