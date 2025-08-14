@@ -1,4 +1,6 @@
-import { Card as CardType } from "@/types/card";
+import { CardType } from "@/types/card";
+import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { useEffect, useRef } from "react";
 
 const Card = ({
   card,
@@ -9,11 +11,25 @@ const Card = ({
   cardDatabase: any;
   onClick?: (card: CardType) => void;
 }) => {
+  const cardElementRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const element = cardElementRef.current;
+    if (!element) return;
+
+    return draggable({
+      element,
+      getInitialData: () => ({ card }),
+    });
+  }, [card]);
+
   const cardData = cardDatabase[card.type];
+  if (!cardData) return null; // Don't render if card data not loaded yet
   const IconComponent = cardData.icon;
 
   return (
     <div
+      ref={cardElementRef}
       className="w-24 h-32 bg-white border-2 border-gray-300 rounded cursor-grab hover:shadow-md transition-all flex flex-col items-center justify-center relative select-none"
       onClick={() => onClick && onClick(card)}
       draggable={false}

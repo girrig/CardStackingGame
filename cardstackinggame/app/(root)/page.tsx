@@ -1,32 +1,16 @@
 "use client";
 
-import Card from "@/components/Card";
 import CombinationBox from "@/components/CombinationBox";
 import TabbedComponent from "@/components/TabbedComponent";
 import cardData from "@/data/cards.json";
-import recipeData from "@/data/recipes.json";
-import { Card as CardType } from "@/types/card";
-import {
-  handleDropToCombination,
-  restoreCombinationCardAtPosition,
-} from "@/utils/combinationUtils";
-import {
-  DragState,
-  DropZone,
-  detectDropZone,
-  handleInvalidDropRestore,
-} from "@/utils/dragUtils";
+import { CardType } from "@/types/card";
 import { getIcon } from "@/utils/iconMap";
-import {
-  handleDropToInventoryFromCombination,
-  handleInventoryReorder,
-} from "@/utils/inventoryUtils";
+import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
   // Load card data from JSON and map icon strings to actual icon components
   const [cardDatabase, setCardDatabase] = useState({});
-  const [recipeDatabase, setRecipeDatabase] = useState<any[]>([]);
 
   // Initial inventory
   const [inventory, setInventory] = useState<CardType[]>([
@@ -39,108 +23,29 @@ const CardStackingGame = () => {
     []
   );
 
-  // Dragging
-  const [globalDragState, setGlobalDragState] = useState<DragState | null>(
-    null
-  );
-
   // Container Refs
   const inventoryAreaRef = useRef<HTMLDivElement>(null);
   const combinationAreaRef = useRef<HTMLDivElement>(null);
 
-  // Define drop zones
-  const dropZones: DropZone[] = [
-    { ref: inventoryAreaRef, type: "inventory" },
-    { ref: combinationAreaRef, type: "combination" },
-  ];
-
-  // Global mouse event handlers for cross-component dragging
+  // Global drag monitor - handles all drag operations and invalid drops
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (globalDragState) {
-        setGlobalDragState((prev) =>
-          prev
-            ? {
-                ...prev,
-                currentX: e.clientX,
-                currentY: e.clientY,
-              }
-            : null
-        );
-      }
-    };
+    return monitorForElements({
+      onDragStart: ({ source }) => {
+        // DON'T remove items on drag start - wait for successful drop
+        // This prevents the need for complex restoration logic
+      },
 
-    const handleMouseUp = (e: MouseEvent) => {
-      if (!globalDragState) return;
+      onDrop: ({ source, location }) => {
+        const card = source.data.card as CardType;
 
-      const dropZone = detectDropZone(e.clientX, e.clientY, dropZones);
-      const isFromCombination = globalDragState.card.location === "combination";
-
-      if (dropZone) {
-        if (dropZone.type === "inventory") {
-          if (isFromCombination) {
-            // Card from combination area dropped on inventory
-            handleDropToInventoryFromCombination(
-              globalDragState.card,
-              inventory,
-              setInventory
-            );
-          } else {
-            // Handle inventory reordering
-            handleInventoryReorder(globalDragState, inventory, setInventory);
-          }
-        } else if (dropZone.type === "combination") {
-          if (!isFromCombination) {
-            // Card from inventory dropped on combination area
-            const rect = combinationAreaRef.current!.getBoundingClientRect();
-            handleDropToCombination(
-              globalDragState.card,
-              e.clientX,
-              e.clientY,
-              rect,
-              globalDragState.offsetX,
-              globalDragState.offsetY,
-              combinationAreaCards,
-              setCombinationAreaCards,
-              inventory
-            );
-          } else {
-            // Card from combination area dropped back on combination area
-            const rect = combinationAreaRef.current!.getBoundingClientRect();
-            restoreCombinationCardAtPosition(
-              globalDragState.card,
-              e.clientX,
-              e.clientY,
-              rect,
-              globalDragState.offsetX,
-              globalDragState.offsetY,
-              setCombinationAreaCards
-            );
-          }
+        // Only handle invalid drops - successful drops are handled by drop targets
+        if (!location.current.dropTargets.length) {
+          // No restoration needed since we never removed the item
+          // Could add card-specific invalid drop logic here if needed
         }
-      } else {
-        // Invalid drop - Restore card to original location
-        handleInvalidDropRestore(
-          globalDragState,
-          inventory,
-          setInventory,
-          combinationAreaCards,
-          setCombinationAreaCards
-        );
-      }
-
-      setGlobalDragState(null);
-    };
-
-    if (globalDragState) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-        document.removeEventListener("mouseup", handleMouseUp);
-      };
-    }
-  }, [globalDragState]);
+      },
+    });
+  }, []);
 
   useEffect(() => {
     const loadedCards: any = {};
@@ -151,7 +56,6 @@ const CardStackingGame = () => {
       };
     });
     setCardDatabase(loadedCards);
-    setRecipeDatabase(recipeData);
   }, []);
 
   return (
@@ -161,19 +65,16 @@ const CardStackingGame = () => {
           <div className="w-3/4">
             <TabbedComponent
               inventoryAreaRef={inventoryAreaRef}
-              setGlobalDragState={setGlobalDragState}
-              globalDragState={globalDragState}
               inventory={inventory}
               setInventory={setInventory}
               cardDatabase={cardDatabase}
+              setCombinationAreaCards={setCombinationAreaCards}
             />
           </div>
 
           <div className="w-1/4 flex flex-col">
             <CombinationBox
               combinationAreaRef={combinationAreaRef}
-              globalDragState={globalDragState}
-              setGlobalDragState={setGlobalDragState}
               setInventory={setInventory}
               cardDatabase={cardDatabase}
               combinationAreaCards={combinationAreaCards}
@@ -181,19 +82,6 @@ const CardStackingGame = () => {
             />
           </div>
         </div>
-
-        {/* Floating drag preview card */}
-        {globalDragState && (
-          <div
-            className="fixed pointer-events-none z-50"
-            style={{
-              left: globalDragState.currentX - globalDragState.offsetX,
-              top: globalDragState.currentY - globalDragState.offsetY,
-            }}
-          >
-            <Card card={globalDragState.card} cardDatabase={cardDatabase} />
-          </div>
-        )}
       </div>
     </div>
   );

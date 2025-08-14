@@ -1,33 +1,32 @@
 "use client";
 
 import Card from "@/components/Card";
-import { Card as CardType } from "@/types/card";
-import { DragState } from "@/utils/dragUtils";
+import { CardType } from "@/types/card";
 import {
   calculateGridPosition,
   calculateOptimalGridSize,
-  initializeDragFromInventory,
   INVENTORY_GRID_CONFIG,
   sortCardsByQuantity,
 } from "@/utils/inventoryUtils";
+import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const InventoryBox = ({
   inventoryAreaRef,
-  setGlobalDragState,
-  globalDragState,
   inventory,
   setInventory,
   cardDatabase,
+  setCombinationAreaCards,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
-  globalDragState: DragState | null;
-  setGlobalDragState: (state: DragState | null) => void;
   inventory: CardType[];
   setInventory: (
     inventory: CardType[] | ((prev: CardType[]) => CardType[])
   ) => void;
   cardDatabase: any;
+  setCombinationAreaCards: (
+    cards: CardType[] | ((prev: CardType[]) => CardType[])
+  ) => void;
 }) => {
   // Track container size for responsive grid
   const [containerSize, setContainerSize] = useState<{
@@ -37,6 +36,57 @@ const InventoryBox = ({
 
   // Create ref for the component itself to measure its actual size
   const componentRef = useRef<HTMLDivElement>(null);
+
+  // Set up drop zone for inventory
+  useEffect(() => {
+    const element = inventoryAreaRef.current;
+    if (!element) return;
+
+    return dropTargetForElements({
+      element,
+      getData: () => ({ type: "inventory" }),
+      onDrop: ({ source }) => {
+        const card = source.data.card as CardType;
+        if (!card) return;
+
+        if (card.location === "combination") {
+          // Handle drop from combination area - remove from combination and add to inventory
+          const existingPile = inventory.find(
+            (item) => item.type === card.type
+          );
+
+          if (existingPile) {
+            setInventory((prev: CardType[]) =>
+              prev.map((item) =>
+                item.type === card.type
+                  ? { ...item, quantity: item.quantity + 1 }
+                  : item
+              )
+            );
+          } else {
+            const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
+            setInventory((prev: CardType[]) => [
+              ...prev,
+              {
+                ...card,
+                id: newId,
+                quantity: 1,
+                location: "inventory",
+                x: undefined,
+                y: undefined,
+              },
+            ]);
+          }
+
+          // Remove from combination area
+          setCombinationAreaCards((prev: CardType[]) =>
+            prev.filter((item) => item.id !== card.id)
+          );
+        }
+        // Note: Inventory-to-inventory drops are no-ops since cards never leave inventory during drag
+      },
+    });
+  }, [inventory, setInventory, setCombinationAreaCards, inventoryAreaRef]);
 
   // Update container size on resize
   useEffect(() => {
@@ -107,20 +157,6 @@ const InventoryBox = ({
   const inventoryAreaWidth = gridSize?.actualWidth;
   const inventoryAreaHeight = gridSize?.actualHeight;
 
-  // Handle drag start
-  const handleMouseDown = (e: React.MouseEvent, card: CardType) => {
-    e.preventDefault();
-
-    const { dragState } = initializeDragFromInventory(
-      e,
-      card,
-      inventory,
-      setInventory
-    );
-
-    setGlobalDragState(dragState);
-  };
-
   return (
     <div ref={componentRef} className="w-full h-full">
       <div className="bg-white border border-gray-200 rounded-lg p-6 h-full flex flex-col">
@@ -159,8 +195,6 @@ const InventoryBox = ({
 
                 {/* Render cards */}
                 {sortedInventory.map((card, index) => {
-                  const isBeingDragged =
-                    globalDragState && globalDragState.cardId === card.id;
                   const cardInfo = cardDatabase[card.type];
                   if (!cardInfo) return null; // Skip rendering if card data not loaded yet
 
@@ -170,14 +204,11 @@ const InventoryBox = ({
                   return (
                     <div
                       key={`card-${card.id}-${index}`}
-                      className={`absolute ${
-                        isBeingDragged ? "opacity-0" : "opacity-100"
-                      }`}
+                      className="absolute"
                       style={{
                         transform: `translate(${position.x}px, ${position.y}px)`,
                         zIndex: 10,
                       }}
-                      onMouseDown={(e) => handleMouseDown(e, card)}
                     >
                       <Card card={card} cardDatabase={cardDatabase} />
                     </div>

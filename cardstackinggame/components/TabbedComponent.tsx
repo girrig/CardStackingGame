@@ -1,7 +1,6 @@
 "use client";
 
-import { Card as CardType } from "@/types/card";
-import { DragState } from "@/utils/dragUtils";
+import { CardType } from "@/types/card";
 import { useState } from "react";
 import InventoryBox from "./InventoryBox";
 
@@ -12,20 +11,20 @@ type Tab = {
 
 const TabbedComponent = ({
   inventoryAreaRef,
-  setGlobalDragState,
-  globalDragState,
   inventory,
   setInventory,
   cardDatabase,
+  setCombinationAreaCards,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
-  globalDragState: DragState | null;
-  setGlobalDragState: (state: DragState | null) => void;
   inventory: CardType[];
   setInventory: (
     inventory: CardType[] | ((prev: CardType[]) => CardType[])
   ) => void;
   cardDatabase: any;
+  setCombinationAreaCards: (
+    cards: CardType[] | ((prev: CardType[]) => CardType[])
+  ) => void;
 }) => {
   const [activeTab, setActiveTab] = useState("inventory");
 
@@ -40,11 +39,10 @@ const TabbedComponent = ({
         return (
           <InventoryBox
             inventoryAreaRef={inventoryAreaRef}
-            setGlobalDragState={setGlobalDragState}
-            globalDragState={globalDragState}
             inventory={inventory}
             setInventory={setInventory}
             cardDatabase={cardDatabase}
+            setCombinationAreaCards={setCombinationAreaCards}
           />
         );
       case "equipment":

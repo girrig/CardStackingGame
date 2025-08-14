@@ -1,23 +1,18 @@
 "use client";
 
 import Card from "@/components/Card";
-import { Card as CardType } from "@/types/card";
-import { initializeDragFromCombination } from "@/utils/combinationUtils";
-import { DragState } from "@/utils/dragUtils";
-import { useEffect, useState } from "react";
+import { CardType } from "@/types/card";
+import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { useEffect } from "react";
 
 const CombinationBox = ({
   combinationAreaRef,
-  globalDragState,
-  setGlobalDragState,
   setInventory,
   cardDatabase,
   combinationAreaCards,
   setCombinationAreaCards,
 }: {
   combinationAreaRef: React.RefObject<HTMLDivElement | null>;
-  globalDragState: DragState | null;
-  setGlobalDragState: (state: DragState | null) => void;
   setInventory: (
     inventory: CardType[] | ((prev: CardType[]) => CardType[])
   ) => void;
@@ -27,96 +22,65 @@ const CombinationBox = ({
     cards: CardType[] | ((prev: CardType[]) => CardType[])
   ) => void;
 }) => {
-  // Card positions
-  const [cardPositions, setCardPositions] = useState<
-    Map<number, { x: number; y: number }>
-  >(new Map());
-
-  // Initialize card positions in a scattered layout
+  // Set up drop zone for combination area
   useEffect(() => {
-    setCardPositions((prev) => {
-      const newMap = new Map(prev);
-      let hasChanges = false;
+    const element = combinationAreaRef.current;
+    if (!element) return;
 
-      combinationAreaCards.forEach((card) => {
-        if (!newMap.has(card.id)) {
-          let x, y;
+    return dropTargetForElements({
+      element,
+      getData: () => ({ type: "combination" }),
+      onDrop: ({ source, location }) => {
+        const card = source.data.card as CardType;
+        if (!card) return;
 
-          // Use drop position if provided, otherwise place at top left
-          if (card.dropX !== undefined && card.dropY !== undefined) {
-            x = card.dropX;
-            y = card.dropY;
-          } else {
-            x = 20;
-            y = 20;
-          }
+        // Calculate drop position relative to combination area
+        const rect = element.getBoundingClientRect();
+        const containerBorder = 2;
 
-          newMap.set(card.id, { x, y });
-          hasChanges = true;
-        }
-      });
+        const x = location.current.input.clientX - rect.left - containerBorder;
+        const y = location.current.input.clientY - rect.top - containerBorder;
 
-      // Remove cards that no longer exist
-      for (const cardId of newMap.keys()) {
-        if (!combinationAreaCards.some((card) => card.id === cardId)) {
-          newMap.delete(cardId);
-          hasChanges = true;
-        }
-      }
+        if (card.location === "inventory") {
+          // Card from inventory to combination area
+          const newId =
+            Math.max(...combinationAreaCards.map((c) => c.id), 0, card.id, 0) +
+            1;
 
-      return hasChanges ? newMap : prev;
-    });
-  }, [combinationAreaCards]);
+          const newCard: CardType = {
+            ...card,
+            id: newId,
+            quantity: 1,
+            location: "combination",
+            x,
+            y,
+          };
 
-  // Handle mouse movement for repositioning cards
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (globalDragState && combinationAreaRef.current) {
-        const cardInCombination = combinationAreaCards.find(
-          (card) => card.id === globalDragState.cardId
-        );
-        if (cardInCombination) {
-          const rect = combinationAreaRef.current.getBoundingClientRect();
-          // Position card using the offset to maintain grab position
-          const CONTAINER_BORDER = 2; // border-2 class = 2px border
-          const relativeX =
-            e.clientX - rect.left - globalDragState.offsetX - CONTAINER_BORDER;
-          const relativeY =
-            e.clientY - rect.top - globalDragState.offsetY - CONTAINER_BORDER;
+          setCombinationAreaCards((prev: CardType[]) => [...prev, newCard]);
 
-          setCardPositions(
-            (prev) =>
-              new Map(
-                prev.set(globalDragState.cardId, {
-                  x: relativeX,
-                  y: relativeY,
-                })
+          // Remove from inventory
+          if (card.quantity > 1) {
+            setInventory((prev: CardType[]) =>
+              prev.map((item) =>
+                item.id === card.id
+                  ? { ...item, quantity: item.quantity - 1 }
+                  : item
               )
+            );
+          } else {
+            setInventory((prev: CardType[]) =>
+              prev.filter((item) => item.id !== card.id)
+            );
+          }
+        } else if (card.location === "combination") {
+          // Card repositioned within combination area
+          setCombinationAreaCards((prev: CardType[]) =>
+            prev.map((c) => (c.id === card.id ? { ...c, x, y } : c))
           );
         }
-      }
-    };
-
-    if (globalDragState) {
-      document.addEventListener("mousemove", handleMouseMove);
-      return () => {
-        document.removeEventListener("mousemove", handleMouseMove);
-      };
-    }
-  }, [globalDragState, combinationAreaCards]);
-
-  // Handle mouse down for dragging cards within combination area
-  const handleMouseDown = (e: React.MouseEvent, card: CardType) => {
-    e.preventDefault();
-
-    const dragState = initializeDragFromCombination(
-      e,
-      card,
-      setCombinationAreaCards
-    );
-
-    setGlobalDragState(dragState);
-  };
+      },
+    });
+  }, [combinationAreaCards, setCombinationAreaCards, combinationAreaRef]);
 
   // Clear Area - Return all cards to inventory
   const clearArea = () => {
@@ -125,7 +89,6 @@ const CombinationBox = ({
 
     // Clear combination area immediately
     setCombinationAreaCards([]);
-    setCardPositions(new Map());
 
     // Then update inventory based on the snapshot
     setInventory((prevInventory: CardType[]) => {
@@ -152,6 +115,7 @@ const CombinationBox = ({
             id: newId,
             type: card.type,
             quantity: 1,
+            location: "inventory",
           });
         }
       });
@@ -166,7 +130,7 @@ const CombinationBox = ({
         {/* Combination Area */}
         <div
           ref={combinationAreaRef}
-          className="w-full flex-1 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg transition-all hover:bg-gray-100 relative overflow-hidden"
+          className="w-full flex-1 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg relative overflow-hidden"
         >
           {combinationAreaCards.length === 0 ? (
             <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg p-4">
@@ -174,24 +138,22 @@ const CombinationBox = ({
             </div>
           ) : (
             combinationAreaCards.map((card, index) => {
-              const isBeingDragged =
-                globalDragState && globalDragState.cardId === card.id;
               const cardInfo = cardDatabase[card.type];
               if (!cardInfo) return null;
 
-              const position = cardPositions.get(card.id);
-              if (!position) return null; // Skip if no position yet
+              // Use coordinates directly from the card, with fallback
+              const x = card.x ?? 20;
+              const y = card.y ?? 20;
 
               return (
                 <div
                   key={`combination-card-${card.id}-${index}`}
                   className="absolute"
                   style={{
-                    transform: `translate(${position.x}px, ${position.y}px)`,
+                    left: `${x}px`,
+                    top: `${y}px`,
                     zIndex: 10,
-                    opacity: isBeingDragged ? 0 : 1,
                   }}
-                  onMouseDown={(e) => handleMouseDown(e, card)}
                 >
                   <Card card={card} cardDatabase={cardDatabase} />
                 </div>
