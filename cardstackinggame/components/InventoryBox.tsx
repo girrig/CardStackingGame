@@ -119,11 +119,7 @@ const InventoryBox = ({
                   inventoryAreaRef.current = node;
                 }
               }}
-              className={`relative border-2 border-dashed rounded-lg overflow-hidden ${
-                isOver
-                  ? "bg-blue-50 border-blue-300"
-                  : "bg-gray-50 border-gray-300"
-              }`}
+              className={`relative border-2 border-dashed rounded-lg overflow-hidden bg-gray-50 border-gray-300`}
               style={{
                 height: inventoryAreaHeight,
                 width: inventoryAreaWidth,

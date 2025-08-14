@@ -81,9 +81,7 @@ const CombinationBox = ({
               combinationAreaRef.current = node;
             }
           }}
-          className={`w-full flex-1 border-2 border-dashed rounded-lg relative overflow-hidden ${
-            isOver ? "border-blue-400 bg-blue-50" : "border-gray-300 bg-gray-50"
-          }`}
+          className={`w-full flex-1 border-2 border-dashed rounded-lg relative overflow-hidden border-gray-300 bg-gray-50`}
         >
           {combinationAreaCards.length === 0 ? (
             <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg p-4">
