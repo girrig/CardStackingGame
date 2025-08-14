@@ -137,8 +137,31 @@ const CardStackingGame = () => {
           );
         }
       } else if (card.location === "combination") {
-        // Card repositioned within combination area - for now, just keep it in place
-        // TODO: Implement precise positioning based on drop coordinates
+        // Card repositioned within combination area
+        const combinationAreaElement = combinationAreaRef.current;
+        if (!combinationAreaElement) return;
+
+        const rect = combinationAreaElement.getBoundingClientRect();
+        const clientOffset = event.delta;
+
+        // Calculate new position based on current position + drag delta
+        const currentCard = combinationAreaCards.find((c) => c.id === card.id);
+        if (currentCard) {
+          const newX = Math.max(
+            0,
+            Math.min(rect.width - 96, (currentCard.x || 0) + clientOffset.x)
+          );
+          const newY = Math.max(
+            0,
+            Math.min(rect.height - 128, (currentCard.y || 0) + clientOffset.y)
+          );
+
+          setCombinationAreaCards((prev: CardType[]) =>
+            prev.map((item) =>
+              item.id === card.id ? { ...item, x: newX, y: newY } : item
+            )
+          );
+        }
       }
     }
   };
