@@ -8,25 +8,17 @@ import {
   INVENTORY_GRID_CONFIG,
   sortCardsByQuantity,
 } from "@/utils/inventoryUtils";
-import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { useDroppable } from "@dnd-kit/core";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const InventoryBox = ({
   inventoryAreaRef,
   inventory,
-  setInventory,
   cardDatabase,
-  setCombinationAreaCards,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
   inventory: CardType[];
-  setInventory: (
-    inventory: CardType[] | ((prev: CardType[]) => CardType[])
-  ) => void;
   cardDatabase: any;
-  setCombinationAreaCards: (
-    cards: CardType[] | ((prev: CardType[]) => CardType[])
-  ) => void;
 }) => {
   // Track container size for responsive grid
   const [containerSize, setContainerSize] = useState<{
@@ -37,56 +29,12 @@ const InventoryBox = ({
   // Create ref for the component itself to measure its actual size
   const componentRef = useRef<HTMLDivElement>(null);
 
-  // Set up drop zone for inventory
-  useEffect(() => {
-    const element = inventoryAreaRef.current;
-    if (!element) return;
-
-    return dropTargetForElements({
-      element,
-      getData: () => ({ type: "inventory" }),
-      onDrop: ({ source }) => {
-        const card = source.data.card as CardType;
-        if (!card) return;
-
-        if (card.location === "combination") {
-          // Handle drop from combination area - remove from combination and add to inventory
-          const existingPile = inventory.find(
-            (item) => item.type === card.type
-          );
-
-          if (existingPile) {
-            setInventory((prev: CardType[]) =>
-              prev.map((item) =>
-                item.type === card.type
-                  ? { ...item, quantity: item.quantity + 1 }
-                  : item
-              )
-            );
-          } else {
-            const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
-            setInventory((prev: CardType[]) => [
-              ...prev,
-              {
-                ...card,
-                id: newId,
-                quantity: 1,
-                location: "inventory",
-                x: undefined,
-                y: undefined,
-              },
-            ]);
-          }
-
-          // Remove from combination area
-          setCombinationAreaCards((prev: CardType[]) =>
-            prev.filter((item) => item.id !== card.id)
-          );
-        }
-        // Note: Inventory-to-inventory drops are no-ops since cards never leave inventory during drag
-      },
-    });
-  }, [inventory, setInventory, setCombinationAreaCards, inventoryAreaRef]);
+  const { setNodeRef, isOver } = useDroppable({
+    id: "inventory",
+    data: {
+      type: "inventory",
+    },
+  });
 
   // Update container size on resize
   useEffect(() => {
@@ -165,13 +113,23 @@ const InventoryBox = ({
             <div className="text-gray-500">Loading inventory...</div>
           ) : (
             <div
-              className="relative bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg overflow-hidden"
+              ref={(node) => {
+                setNodeRef(node);
+                if (inventoryAreaRef) {
+                  inventoryAreaRef.current = node;
+                }
+              }}
+              className={`relative border-2 border-dashed rounded-lg overflow-hidden ${
+                isOver
+                  ? "bg-blue-50 border-blue-300"
+                  : "bg-gray-50 border-gray-300"
+              }`}
               style={{
                 height: inventoryAreaHeight,
                 width: inventoryAreaWidth,
               }}
             >
-              <div ref={inventoryAreaRef} className="relative w-full h-full">
+              <div className="relative w-full h-full">
                 {/* Render grid slots */}
                 {Array.from({ length: gridSize.totalSlots }, (_, index) => {
                   const position = calculateGridPosition(

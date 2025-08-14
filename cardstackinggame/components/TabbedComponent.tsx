@@ -12,19 +12,11 @@ type Tab = {
 const TabbedComponent = ({
   inventoryAreaRef,
   inventory,
-  setInventory,
   cardDatabase,
-  setCombinationAreaCards,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
   inventory: CardType[];
-  setInventory: (
-    inventory: CardType[] | ((prev: CardType[]) => CardType[])
-  ) => void;
   cardDatabase: any;
-  setCombinationAreaCards: (
-    cards: CardType[] | ((prev: CardType[]) => CardType[])
-  ) => void;
 }) => {
   const [activeTab, setActiveTab] = useState("inventory");
 
@@ -40,9 +32,7 @@ const TabbedComponent = ({
           <InventoryBox
             inventoryAreaRef={inventoryAreaRef}
             inventory={inventory}
-            setInventory={setInventory}
             cardDatabase={cardDatabase}
-            setCombinationAreaCards={setCombinationAreaCards}
           />
         );
       case "equipment":

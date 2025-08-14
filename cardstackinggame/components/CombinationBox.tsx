@@ -2,8 +2,7 @@
 
 import Card from "@/components/Card";
 import { CardType } from "@/types/card";
-import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
-import { useEffect } from "react";
+import { useDroppable } from "@dnd-kit/core";
 
 const CombinationBox = ({
   combinationAreaRef,
@@ -22,75 +21,12 @@ const CombinationBox = ({
     cards: CardType[] | ((prev: CardType[]) => CardType[])
   ) => void;
 }) => {
-  // Set up drop zone for combination area
-  useEffect(() => {
-    const element = combinationAreaRef.current;
-    if (!element) return;
-
-    return dropTargetForElements({
-      element,
-      getData: () => ({ type: "combination" }),
-      onDrop: ({ source, location }) => {
-        const card = source.data.card as CardType;
-        const dragOffset = source.data.dragOffset as { x: number; y: number };
-        if (!card) return;
-
-        // Calculate drop position relative to combination area
-        const rect = element.getBoundingClientRect();
-        const containerBorder = 2;
-
-        // Subtract the drag offset so the card appears where the user grabbed it
-        const x =
-          location.current.input.clientX -
-          rect.left -
-          containerBorder -
-          (dragOffset?.x || 0);
-        const y =
-          location.current.input.clientY -
-          rect.top -
-          containerBorder -
-          (dragOffset?.y || 0);
-
-        if (card.location === "inventory") {
-          // Card from inventory to combination area
-          const newId =
-            Math.max(...combinationAreaCards.map((c) => c.id), 0, card.id, 0) +
-            1;
-
-          const newCard: CardType = {
-            ...card,
-            id: newId,
-            quantity: 1,
-            location: "combination",
-            x,
-            y,
-          };
-
-          setCombinationAreaCards((prev: CardType[]) => [...prev, newCard]);
-
-          // Remove from inventory
-          if (card.quantity > 1) {
-            setInventory((prev: CardType[]) =>
-              prev.map((item) =>
-                item.id === card.id
-                  ? { ...item, quantity: item.quantity - 1 }
-                  : item
-              )
-            );
-          } else {
-            setInventory((prev: CardType[]) =>
-              prev.filter((item) => item.id !== card.id)
-            );
-          }
-        } else if (card.location === "combination") {
-          // Card repositioned within combination area
-          setCombinationAreaCards((prev: CardType[]) =>
-            prev.map((c) => (c.id === card.id ? { ...c, x, y } : c))
-          );
-        }
-      },
-    });
-  }, [combinationAreaCards, setCombinationAreaCards, combinationAreaRef]);
+  const { setNodeRef, isOver } = useDroppable({
+    id: "combination",
+    data: {
+      type: "combination",
+    },
+  });
 
   // Clear Area - Return all cards to inventory
   const clearArea = () => {
@@ -139,8 +75,15 @@ const CombinationBox = ({
       <div className="bg-white border border-gray-200 rounded-lg p-6 h-full flex flex-col">
         {/* Combination Area */}
         <div
-          ref={combinationAreaRef}
-          className="w-full flex-1 border-2 border-dashed border-gray-300 bg-gray-50 rounded-lg relative overflow-hidden"
+          ref={(node) => {
+            setNodeRef(node);
+            if (combinationAreaRef) {
+              combinationAreaRef.current = node;
+            }
+          }}
+          className={`w-full flex-1 border-2 border-dashed rounded-lg relative overflow-hidden ${
+            isOver ? "border-blue-400 bg-blue-50" : "border-gray-300 bg-gray-50"
+          }`}
         >
           {combinationAreaCards.length === 0 ? (
             <div className="w-full h-full flex items-center justify-center text-gray-400 text-lg p-4">

@@ -1,14 +1,20 @@
 "use client";
 
+import Card from "@/components/Card";
 import CombinationBox from "@/components/CombinationBox";
 import TabbedComponent from "@/components/TabbedComponent";
 import cardData from "@/data/cards.json";
 import { CardType } from "@/types/card";
 import { getIcon } from "@/utils/iconMap";
 import {
-  dropTargetForElements,
-  monitorForElements,
-} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+  DndContext,
+  DragEndEvent,
+  DragOverlay,
+  DragStartEvent,
+  MouseSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
@@ -29,49 +35,113 @@ const CardStackingGame = () => {
   // Container Refs
   const inventoryAreaRef = useRef<HTMLDivElement>(null);
   const combinationAreaRef = useRef<HTMLDivElement>(null);
-  const globalAreaRef = useRef<HTMLDivElement>(null);
 
-  // Global drag monitor - handles all drag operations and invalid drops
-  useEffect(() => {
-    return monitorForElements({
-      onDragStart: ({ source }) => {
-        // DON'T remove items on drag start - wait for successful drop
-        // This prevents the need for complex restoration logic
-      },
+  // Drag state for overlay
+  const [activeCard, setActiveCard] = useState<CardType | null>(null);
 
-      onDrop: ({ source, location }) => {
-        const card = source.data.card as CardType;
+  // Set up sensor for mouse
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      distance: 8,
+    },
+  });
+  const sensors = useSensors(mouseSensor);
 
-        // Check if this was an invalid drop (only global drop target hit)
-        const isInvalidDrop =
-          location.current.dropTargets.length === 1 &&
-          location.current.dropTargets[0]?.data.type === "global";
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveCard(event.active.data.current?.card || null);
+  };
 
-        if (isInvalidDrop) {
-          // No restoration needed since we never removed the item
-          // Could add card-specific invalid drop logic here if needed
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveCard(null);
+
+    if (!over || !active.data.current?.card) return;
+
+    const card = active.data.current.card as CardType;
+    const dropType = over.data.current?.type;
+
+    if (dropType === "inventory" && card.location === "combination") {
+      // Handle drop from combination area to inventory
+      const existingPile = inventory.find((item) => item.type === card.type);
+
+      if (existingPile) {
+        setInventory((prev: CardType[]) =>
+          prev.map((item) =>
+            item.type === card.type
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          )
+        );
+      } else {
+        const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
+        setInventory((prev: CardType[]) => [
+          ...prev,
+          {
+            ...card,
+            id: newId,
+            quantity: 1,
+            location: "inventory",
+            x: undefined,
+            y: undefined,
+          },
+        ]);
+      }
+
+      // Remove from combination area
+      setCombinationAreaCards((prev: CardType[]) =>
+        prev.filter((item) => item.id !== card.id)
+      );
+    } else if (dropType === "combination") {
+      // Handle drop to combination area
+      if (card.location === "inventory") {
+        // Card from inventory to combination area
+        const combinationAreaElement = combinationAreaRef.current;
+        if (!combinationAreaElement) return;
+
+        const rect = combinationAreaElement.getBoundingClientRect();
+        const x = Math.max(
+          0,
+          Math.min(rect.width - 96, Math.random() * (rect.width - 96))
+        ); // 96px = card width
+        const y = Math.max(
+          0,
+          Math.min(rect.height - 128, Math.random() * (rect.height - 128))
+        ); // 128px = card height
+
+        const newId =
+          Math.max(...combinationAreaCards.map((c) => c.id), 0, card.id, 0) + 1;
+
+        const newCard: CardType = {
+          ...card,
+          id: newId,
+          quantity: 1,
+          location: "combination",
+          x,
+          y,
+        };
+
+        setCombinationAreaCards((prev: CardType[]) => [...prev, newCard]);
+
+        // Remove from inventory
+        if (card.quantity > 1) {
+          setInventory((prev: CardType[]) =>
+            prev.map((item) =>
+              item.id === card.id
+                ? { ...item, quantity: item.quantity - 1 }
+                : item
+            )
+          );
+        } else {
+          setInventory((prev: CardType[]) =>
+            prev.filter((item) => item.id !== card.id)
+          );
         }
-      },
-    });
-  }, []);
-
-  // Global drop target to prevent "do not" cursor
-  useEffect(() => {
-    const element = globalAreaRef.current;
-    if (!element) return;
-
-    return dropTargetForElements({
-      element,
-      getData: () => ({ type: "global" }),
-      onDrop: ({ location }) => {
-        // Only handle drops that didn't hit any specific drop targets
-        if (location.current.dropTargets.length === 1) {
-          // Only the global drop target was hit - this is an invalid drop
-          // Do nothing, just prevent the "do not" cursor
-        }
-      },
-    });
-  }, []);
+      } else if (card.location === "combination") {
+        // Card repositioned within combination area - for now, just keep it in place
+        // TODO: Implement precise positioning based on drop coordinates
+      }
+    }
+  };
 
   useEffect(() => {
     const loadedCards: any = {};
@@ -85,31 +155,41 @@ const CardStackingGame = () => {
   }, []);
 
   return (
-    <div ref={globalAreaRef} className="h-screen bg-gray-50 p-4">
-      <div className="w-full h-full flex flex-col">
-        <div className="flex gap-4 flex-1 min-h-0">
-          <div className="w-3/4">
-            <TabbedComponent
-              inventoryAreaRef={inventoryAreaRef}
-              inventory={inventory}
-              setInventory={setInventory}
-              cardDatabase={cardDatabase}
-              setCombinationAreaCards={setCombinationAreaCards}
-            />
-          </div>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="h-screen bg-gray-50 p-4">
+        <div className="w-full h-full flex flex-col">
+          <div className="flex gap-4 flex-1 min-h-0">
+            <div className="w-3/4">
+              <TabbedComponent
+                inventoryAreaRef={inventoryAreaRef}
+                inventory={inventory}
+                cardDatabase={cardDatabase}
+              />
+            </div>
 
-          <div className="w-1/4 flex flex-col">
-            <CombinationBox
-              combinationAreaRef={combinationAreaRef}
-              setInventory={setInventory}
-              cardDatabase={cardDatabase}
-              combinationAreaCards={combinationAreaCards}
-              setCombinationAreaCards={setCombinationAreaCards}
-            />
+            <div className="w-1/4 flex flex-col">
+              <CombinationBox
+                combinationAreaRef={combinationAreaRef}
+                setInventory={setInventory}
+                cardDatabase={cardDatabase}
+                combinationAreaCards={combinationAreaCards}
+                setCombinationAreaCards={setCombinationAreaCards}
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      <DragOverlay>
+        {activeCard ? (
+          <Card card={activeCard} cardDatabase={cardDatabase} />
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 };
 
