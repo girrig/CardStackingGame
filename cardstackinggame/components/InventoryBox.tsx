@@ -6,7 +6,6 @@ import {
   calculateGridPosition,
   calculateOptimalGridSize,
   INVENTORY_GRID_CONFIG,
-  sortCardsByQuantity,
 } from "@/utils/inventoryUtils";
 import { useDroppable } from "@dnd-kit/core";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -82,24 +81,20 @@ const InventoryBox = ({
     return result;
   }, [containerSize]);
 
-  // Sort inventory by quantity (highest to lowest)
-  const sortedInventory = useMemo(
-    () => sortCardsByQuantity(inventory),
-    [inventory]
-  );
+  // Inventory is now already sorted from state updates
 
   // Calculate positions for all cards
   const cardPositions = useMemo(() => {
     if (!gridSize) return new Map<number, { x: number; y: number }>();
     const positions = new Map<number, { x: number; y: number }>();
-    sortedInventory.forEach((card, index) => {
+    inventory.forEach((card, index) => {
       positions.set(
         card.id,
         calculateGridPosition(index, gridSize.cols, INVENTORY_GRID_CONFIG)
       );
     });
     return positions;
-  }, [sortedInventory, gridSize]);
+  }, [inventory, gridSize]);
 
   // Use the exact dimensions needed for the grid (no extra padding)
   const inventoryAreaWidth = gridSize?.actualWidth;
@@ -148,7 +143,7 @@ const InventoryBox = ({
                 })}
 
                 {/* Render cards */}
-                {sortedInventory.map((card, index) => {
+                {inventory.map((card, index) => {
                   const cardInfo = cardDatabase[card.type];
                   if (!cardInfo) return null; // Skip rendering if card data not loaded yet
 
@@ -169,7 +164,7 @@ const InventoryBox = ({
                   );
                 })}
 
-                {sortedInventory.length === 0 && (
+                {inventory.length === 0 && (
                   <div className="absolute inset-0 flex items-center justify-center text-gray-500 z-20">
                     Your inventory is empty
                   </div>

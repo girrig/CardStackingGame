@@ -1,4 +1,5 @@
 import { CardType } from "@/types/card";
+import { sortCardsByQuantity } from "./inventoryUtils";
 
 export interface DragUtilsParams {
   inventory: CardType[];
@@ -54,25 +55,29 @@ export const moveCardFromCombinationToInventory = (
 
   if (existingPile) {
     setInventory((prev: CardType[]) =>
-      prev.map((item) =>
-        item.type === card.type
-          ? { ...item, quantity: item.quantity + 1 }
-          : item
+      sortCardsByQuantity(
+        prev.map((item) =>
+          item.type === card.type
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
       )
     );
   } else {
     const newId = Math.max(...inventory.map((i) => i.id), 0) + 1;
-    setInventory((prev: CardType[]) => [
-      ...prev,
-      {
-        ...card,
-        id: newId,
-        quantity: 1,
-        location: "inventory",
-        x: undefined,
-        y: undefined,
-      },
-    ]);
+    setInventory((prev: CardType[]) =>
+      sortCardsByQuantity([
+        ...prev,
+        {
+          ...card,
+          id: newId,
+          quantity: 1,
+          location: "inventory",
+          x: undefined,
+          y: undefined,
+        },
+      ])
+    );
   }
 
   setCombinationAreaCards((prev: CardType[]) =>
@@ -110,13 +115,15 @@ export const moveCardFromInventoryToCombination = (
 
   if (card.quantity > 1) {
     setInventory((prev: CardType[]) =>
-      prev.map((item) =>
-        item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
+      sortCardsByQuantity(
+        prev.map((item) =>
+          item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
+        )
       )
     );
   } else {
     setInventory((prev: CardType[]) =>
-      prev.filter((item) => item.id !== card.id)
+      sortCardsByQuantity(prev.filter((item) => item.id !== card.id))
     );
   }
 };
