@@ -13,9 +13,11 @@ import {
   DragOverlay,
   DragStartEvent,
   MouseSensor,
+  pointerWithin,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
@@ -61,7 +63,25 @@ const CardStackingGame = () => {
     const card = active.data.current.card as CardType;
     const dropType = over.data.current?.type;
 
-    handleCardDrop(card, dropType, event.delta, {
+    // Calculate drop position for combination area drops
+    let dropPosition = null;
+    if (
+      dropType === "combination" &&
+      card.location === "inventory" &&
+      over.rect &&
+      active.rect.current.translated
+    ) {
+      const overRect = over.rect;
+      const activeRect = active.rect.current.translated;
+
+      // Calculate position relative to the combination area, centered on the dragged card
+      dropPosition = {
+        x: Math.max(0, activeRect.left - overRect.left),
+        y: Math.max(0, activeRect.top - overRect.top),
+      };
+    }
+
+    handleCardDrop(card, dropType, event.delta, dropPosition, {
       inventory,
       combinationAreaCards,
       setInventory,
@@ -84,6 +104,7 @@ const CardStackingGame = () => {
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -111,7 +132,7 @@ const CardStackingGame = () => {
         </div>
       </div>
 
-      <DragOverlay>
+      <DragOverlay modifiers={[snapCenterToCursor]}>
         {activeCard ? (
           <Card card={activeCard} cardDatabase={cardDatabase} />
         ) : null}

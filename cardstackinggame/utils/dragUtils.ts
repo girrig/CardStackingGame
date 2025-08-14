@@ -87,6 +87,7 @@ export const moveCardFromCombinationToInventory = (
 
 export const moveCardFromInventoryToCombination = (
   card: CardType,
+  dropPosition: { x: number; y: number } | null,
   {
     combinationAreaCards,
     setInventory,
@@ -97,7 +98,7 @@ export const moveCardFromInventoryToCombination = (
   const combinationAreaElement = combinationAreaRef.current;
   if (!combinationAreaElement) return;
 
-  const { x, y } = calculateRandomPosition(combinationAreaElement);
+  const position = dropPosition || { x: 0, y: 0 };
 
   const newId =
     Math.max(...combinationAreaCards.map((c) => c.id), 0, card.id, 0) + 1;
@@ -107,8 +108,8 @@ export const moveCardFromInventoryToCombination = (
     id: newId,
     quantity: 1,
     location: "combination",
-    x,
-    y,
+    x: position.x,
+    y: position.y,
   };
 
   setCombinationAreaCards((prev: CardType[]) => [...prev, newCard]);
@@ -163,13 +164,14 @@ export const handleCardDrop = (
   card: CardType,
   dropType: string,
   delta: { x: number; y: number },
+  dropPosition: { x: number; y: number } | null,
   params: DragUtilsParams
 ) => {
   if (dropType === "inventory" && card.location === "combination") {
     moveCardFromCombinationToInventory(card, params);
   } else if (dropType === "combination") {
     if (card.location === "inventory") {
-      moveCardFromInventoryToCombination(card, params);
+      moveCardFromInventoryToCombination(card, dropPosition, params);
     } else if (card.location === "combination") {
       repositionCardInCombination(card, delta.x, delta.y, params);
     }
