@@ -5,7 +5,10 @@ import TabbedComponent from "@/components/TabbedComponent";
 import cardData from "@/data/cards.json";
 import { CardType } from "@/types/card";
 import { getIcon } from "@/utils/iconMap";
-import { monitorForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import {
+  dropTargetForElements,
+  monitorForElements,
+} from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
@@ -26,6 +29,7 @@ const CardStackingGame = () => {
   // Container Refs
   const inventoryAreaRef = useRef<HTMLDivElement>(null);
   const combinationAreaRef = useRef<HTMLDivElement>(null);
+  const globalAreaRef = useRef<HTMLDivElement>(null);
 
   // Global drag monitor - handles all drag operations and invalid drops
   useEffect(() => {
@@ -38,10 +42,32 @@ const CardStackingGame = () => {
       onDrop: ({ source, location }) => {
         const card = source.data.card as CardType;
 
-        // Only handle invalid drops - successful drops are handled by drop targets
-        if (!location.current.dropTargets.length) {
+        // Check if this was an invalid drop (only global drop target hit)
+        const isInvalidDrop =
+          location.current.dropTargets.length === 1 &&
+          location.current.dropTargets[0]?.data.type === "global";
+
+        if (isInvalidDrop) {
           // No restoration needed since we never removed the item
           // Could add card-specific invalid drop logic here if needed
+        }
+      },
+    });
+  }, []);
+
+  // Global drop target to prevent "do not" cursor
+  useEffect(() => {
+    const element = globalAreaRef.current;
+    if (!element) return;
+
+    return dropTargetForElements({
+      element,
+      getData: () => ({ type: "global" }),
+      onDrop: ({ location }) => {
+        // Only handle drops that didn't hit any specific drop targets
+        if (location.current.dropTargets.length === 1) {
+          // Only the global drop target was hit - this is an invalid drop
+          // Do nothing, just prevent the "do not" cursor
         }
       },
     });
@@ -59,7 +85,7 @@ const CardStackingGame = () => {
   }, []);
 
   return (
-    <div className="h-screen bg-gray-50 p-4">
+    <div ref={globalAreaRef} className="h-screen bg-gray-50 p-4">
       <div className="w-full h-full flex flex-col">
         <div className="flex gap-4 flex-1 min-h-0">
           <div className="w-3/4">
