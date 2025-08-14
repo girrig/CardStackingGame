@@ -19,7 +19,16 @@ const Card = ({
 
     return draggable({
       element,
-      getInitialData: () => ({ card }),
+      getInitialData: (args) => {
+        const rect = element.getBoundingClientRect();
+        const offsetX = args.input.clientX - rect.left;
+        const offsetY = args.input.clientY - rect.top;
+
+        return {
+          card,
+          dragOffset: { x: offsetX, y: offsetY },
+        };
+      },
     });
   }, [card]);
 

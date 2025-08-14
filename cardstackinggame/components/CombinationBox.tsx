@@ -32,14 +32,24 @@ const CombinationBox = ({
       getData: () => ({ type: "combination" }),
       onDrop: ({ source, location }) => {
         const card = source.data.card as CardType;
+        const dragOffset = source.data.dragOffset as { x: number; y: number };
         if (!card) return;
 
         // Calculate drop position relative to combination area
         const rect = element.getBoundingClientRect();
         const containerBorder = 2;
 
-        const x = location.current.input.clientX - rect.left - containerBorder;
-        const y = location.current.input.clientY - rect.top - containerBorder;
+        // Subtract the drag offset so the card appears where the user grabbed it
+        const x =
+          location.current.input.clientX -
+          rect.left -
+          containerBorder -
+          (dragOffset?.x || 0);
+        const y =
+          location.current.input.clientY -
+          rect.top -
+          containerBorder -
+          (dragOffset?.y || 0);
 
         if (card.location === "inventory") {
           // Card from inventory to combination area
