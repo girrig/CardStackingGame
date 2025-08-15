@@ -89,6 +89,7 @@ export const moveCardFromInventoryToCombination = (
   card: CardType,
   dropPosition: { x: number; y: number } | null,
   {
+    inventory,
     combinationAreaCards,
     setInventory,
     setCombinationAreaCards,
@@ -100,8 +101,13 @@ export const moveCardFromInventoryToCombination = (
 
   const position = dropPosition || { x: 0, y: 0 };
 
-  const newId =
-    Math.max(...combinationAreaCards.map((c) => c.id), 0, card.id, 0) + 1;
+  // Generate a truly unique ID by finding the max across all cards and adding 1
+  const existingIds = [
+    ...combinationAreaCards.map((c) => c.id),
+    ...inventory.map((c) => c.id),
+    0, // Fallback minimum
+  ];
+  const newId = Math.max(...existingIds) + 1;
 
   const newCard: CardType = {
     ...card,
@@ -112,8 +118,10 @@ export const moveCardFromInventoryToCombination = (
     y: position.y,
   };
 
+  // Add to combination area first
   setCombinationAreaCards((prev: CardType[]) => [...prev, newCard]);
 
+  // Then remove from inventory
   if (card.quantity > 1) {
     setInventory((prev: CardType[]) =>
       sortCardsByQuantity(

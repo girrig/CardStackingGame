@@ -21,7 +21,7 @@ const CombinationBox = ({
     cards: CardType[] | ((prev: CardType[]) => CardType[])
   ) => void;
 }) => {
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: "combination",
     data: {
       type: "combination",
@@ -88,7 +88,7 @@ const CombinationBox = ({
               Drag cards from your inventory and combined them here
             </div>
           ) : (
-            combinationAreaCards.map((card, index) => {
+            combinationAreaCards.map((card) => {
               const cardInfo = cardDatabase[card.type];
               if (!cardInfo) return null;
 
@@ -98,7 +98,7 @@ const CombinationBox = ({
 
               return (
                 <div
-                  key={`combination-card-${card.id}-${index}`}
+                  key={`combination-card-${card.id}`}
                   className="absolute"
                   style={{
                     left: `${x}px`,

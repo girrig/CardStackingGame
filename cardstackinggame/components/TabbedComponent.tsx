@@ -13,10 +13,14 @@ const TabbedComponent = ({
   inventoryAreaRef,
   inventory,
   cardDatabase,
+  activeCard,
+  isDraggingFromInventory,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
   inventory: CardType[];
   cardDatabase: any;
+  activeCard: CardType | null;
+  isDraggingFromInventory: boolean;
 }) => {
   const [activeTab, setActiveTab] = useState("inventory");
 
@@ -33,6 +37,8 @@ const TabbedComponent = ({
             inventoryAreaRef={inventoryAreaRef}
             inventory={inventory}
             cardDatabase={cardDatabase}
+            activeCard={activeCard}
+            isDraggingFromInventory={isDraggingFromInventory}
           />
         );
       case "equipment":

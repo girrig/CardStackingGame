@@ -41,6 +41,8 @@ const CardStackingGame = () => {
 
   // Drag state for overlay
   const [activeCard, setActiveCard] = useState<CardType | null>(null);
+  const [isDraggingFromInventory, setIsDraggingFromInventory] =
+    useState<boolean>(false);
 
   // Set up sensor for mouse
   const mouseSensor = useSensor(MouseSensor, {
@@ -51,16 +53,23 @@ const CardStackingGame = () => {
   const sensors = useSensors(mouseSensor);
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveCard(event.active.data.current?.card || null);
+    const card = event.active.data.current?.card || null;
+    setActiveCard(card);
+    setIsDraggingFromInventory(card?.location === "inventory");
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    setActiveCard(null);
-
-    if (!over || !active.data.current?.card) return;
-
     const card = active.data.current.card as CardType;
+
+    // Clear visual drag state
+    setActiveCard(null);
+    setIsDraggingFromInventory(false);
+
+    if (!over || !card) {
+      return;
+    }
+
     const dropType = over.data.current?.type;
 
     // Calculate drop position for combination area drops
@@ -74,13 +83,13 @@ const CardStackingGame = () => {
       const overRect = over.rect;
       const activeRect = active.rect.current.translated;
 
-      // Calculate position relative to the combination area, centered on the dragged card
       dropPosition = {
         x: Math.max(0, activeRect.left - overRect.left),
         y: Math.max(0, activeRect.top - overRect.top),
       };
     }
 
+    // Handle the actual logic using existing dragUtils
     handleCardDrop(card, dropType, event.delta, dropPosition, {
       inventory,
       combinationAreaCards,
@@ -116,6 +125,8 @@ const CardStackingGame = () => {
                 inventoryAreaRef={inventoryAreaRef}
                 inventory={inventory}
                 cardDatabase={cardDatabase}
+                activeCard={activeCard}
+                isDraggingFromInventory={isDraggingFromInventory}
               />
             </div>
 
@@ -134,7 +145,10 @@ const CardStackingGame = () => {
 
       <DragOverlay modifiers={[snapCenterToCursor]}>
         {activeCard ? (
-          <Card card={activeCard} cardDatabase={cardDatabase} />
+          <Card
+            card={{ ...activeCard, quantity: 1 }}
+            cardDatabase={cardDatabase}
+          />
         ) : null}
       </DragOverlay>
     </DndContext>

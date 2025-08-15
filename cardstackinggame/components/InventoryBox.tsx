@@ -14,10 +14,14 @@ const InventoryBox = ({
   inventoryAreaRef,
   inventory,
   cardDatabase,
+  activeCard,
+  isDraggingFromInventory,
 }: {
   inventoryAreaRef: React.RefObject<HTMLDivElement | null>;
   inventory: CardType[];
   cardDatabase: any;
+  activeCard: CardType | null;
+  isDraggingFromInventory: boolean;
 }) => {
   // Track container size for responsive grid
   const [containerSize, setContainerSize] = useState<{
@@ -28,7 +32,7 @@ const InventoryBox = ({
   // Create ref for the component itself to measure its actual size
   const componentRef = useRef<HTMLDivElement>(null);
 
-  const { setNodeRef, isOver } = useDroppable({
+  const { setNodeRef } = useDroppable({
     id: "inventory",
     data: {
       type: "inventory",
@@ -81,20 +85,36 @@ const InventoryBox = ({
     return result;
   }, [containerSize]);
 
-  // Inventory is now already sorted from state updates
+  // Create display inventory with visual reduction during drag
+  const displayInventory = useMemo(() => {
+    if (
+      !isDraggingFromInventory ||
+      !activeCard ||
+      activeCard.location !== "inventory"
+    ) {
+      return inventory;
+    }
+
+    return inventory.map((card) => {
+      if (card.id === activeCard.id && card.quantity > 1) {
+        return { ...card, quantity: card.quantity - 1 };
+      }
+      return card;
+    });
+  }, [inventory, isDraggingFromInventory, activeCard]);
 
   // Calculate positions for all cards
   const cardPositions = useMemo(() => {
     if (!gridSize) return new Map<number, { x: number; y: number }>();
     const positions = new Map<number, { x: number; y: number }>();
-    inventory.forEach((card, index) => {
+    displayInventory.forEach((card, index) => {
       positions.set(
         card.id,
         calculateGridPosition(index, gridSize.cols, INVENTORY_GRID_CONFIG)
       );
     });
     return positions;
-  }, [inventory, gridSize]);
+  }, [displayInventory, gridSize]);
 
   // Use the exact dimensions needed for the grid (no extra padding)
   const inventoryAreaWidth = gridSize?.actualWidth;
@@ -143,7 +163,7 @@ const InventoryBox = ({
                 })}
 
                 {/* Render cards */}
-                {inventory.map((card, index) => {
+                {displayInventory.map((card, index) => {
                   const cardInfo = cardDatabase[card.type];
                   if (!cardInfo) return null; // Skip rendering if card data not loaded yet
 
