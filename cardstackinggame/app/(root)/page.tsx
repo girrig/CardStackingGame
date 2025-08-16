@@ -17,7 +17,6 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import { useEffect, useRef, useState } from "react";
 
 const CardStackingGame = () => {
@@ -43,6 +42,10 @@ const CardStackingGame = () => {
   const [activeCard, setActiveCard] = useState<CardType | null>(null);
   const [isDraggingFromInventory, setIsDraggingFromInventory] =
     useState<boolean>(false);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({
+    x: 0,
+    y: 0,
+  });
 
   // Set up sensor for mouse
   const mouseSensor = useSensor(MouseSensor, {
@@ -56,6 +59,17 @@ const CardStackingGame = () => {
     const card = event.active.data.current?.card || null;
     setActiveCard(card);
     setIsDraggingFromInventory(card?.location === "inventory");
+
+    // Calculate drag offset (where user clicked relative to card's top-left)
+    if (event.active.rect.current.initial && event.activatorEvent) {
+      const cardRect = event.active.rect.current.initial;
+      const activatorEvent = event.activatorEvent as MouseEvent;
+      const offset = {
+        x: activatorEvent.clientX - cardRect.left,
+        y: activatorEvent.clientY - cardRect.top,
+      };
+      setDragOffset(offset);
+    }
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -84,8 +98,8 @@ const CardStackingGame = () => {
       const activeRect = active.rect.current.translated;
 
       dropPosition = {
-        x: Math.max(0, activeRect.left - overRect.left),
-        y: Math.max(0, activeRect.top - overRect.top),
+        x: Math.max(0, activeRect.left - overRect.left - dragOffset.x),
+        y: Math.max(0, activeRect.top - overRect.top - dragOffset.y),
       };
     }
 
@@ -144,7 +158,6 @@ const CardStackingGame = () => {
       </div>
 
       <DragOverlay
-        modifiers={[snapCenterToCursor]}
         dropAnimation={{
           duration: 150,
           easing: "ease-out",
