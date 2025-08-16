@@ -143,7 +143,10 @@ const CardStackingGame = () => {
         </div>
       </div>
 
-      <DragOverlay modifiers={[snapCenterToCursor]}>
+      <DragOverlay
+        modifiers={[snapCenterToCursor]}
+        dropAnimation={{ duration: 150, easing: "ease-out" }}
+      >
         {activeCard ? (
           <Card
             card={{ ...activeCard, quantity: 1 }}
