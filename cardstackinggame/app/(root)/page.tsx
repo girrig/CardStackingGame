@@ -145,7 +145,11 @@ const CardStackingGame = () => {
 
       <DragOverlay
         modifiers={[snapCenterToCursor]}
-        dropAnimation={{ duration: 150, easing: "ease-out" }}
+        dropAnimation={{
+          duration: 150,
+          easing: "ease-out",
+          sideEffects: () => {}, // Disable default fade-out of placeholder
+        }}
       >
         {activeCard ? (
           <Card
