@@ -2,6 +2,7 @@
 
 import Card from "@/components/Card";
 import { CardType } from "@/types/card";
+import { sortCardsByQuantity } from "@/utils/inventoryUtils";
 import { useDroppable } from "@dnd-kit/core";
 
 const CombinationBox = ({
@@ -66,7 +67,7 @@ const CombinationBox = ({
         }
       });
 
-      return newInventory;
+      return sortCardsByQuantity(newInventory);
     });
   };
 
