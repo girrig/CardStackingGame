@@ -3,6 +3,7 @@
 import Card from "@/components/Card";
 import CombinationBox from "@/components/CombinationBox";
 import TabbedComponent from "@/components/TabbedComponent";
+import { DRAG_SNAP_BACK_DURATION } from "@/constants/globals";
 import cardData from "@/data/cards.json";
 import { CardType } from "@/types/card";
 import { handleCardDrop } from "@/utils/dragUtils";
@@ -46,6 +47,7 @@ const CardStackingGame = () => {
     x: 0,
     y: 0,
   });
+  const [shouldSnapBack, setShouldSnapBack] = useState<boolean>(false);
 
   // Set up sensor for mouse
   const mouseSensor = useSensor(MouseSensor, {
@@ -74,17 +76,40 @@ const CardStackingGame = () => {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    const card = active.data.current.card as CardType;
-
-    // Clear visual drag state
-    setActiveCard(null);
-    setIsDraggingFromInventory(false);
+    const card = active.data.current?.card as CardType;
 
     if (!over || !card) {
+      setShouldSnapBack(true);
+      setTimeout(() => {
+        setActiveCard(null);
+        setIsDraggingFromInventory(false);
+        setShouldSnapBack(false);
+      }, DRAG_SNAP_BACK_DURATION);
       return;
     }
 
     const dropType = over.data.current?.type;
+
+    // Determine if this is an invalid drop (should snap back)
+    const isInvalidDrop =
+      !dropType || (card.location === "inventory" && dropType === "inventory");
+
+    setShouldSnapBack(isInvalidDrop);
+
+    // Clear visual drag state after a brief delay to allow animation
+    setTimeout(
+      () => {
+        setActiveCard(null);
+        setIsDraggingFromInventory(false);
+        setShouldSnapBack(false);
+      },
+      isInvalidDrop ? DRAG_SNAP_BACK_DURATION : 0
+    );
+
+    // If invalid drop, don't proceed with the drop logic
+    if (isInvalidDrop) {
+      return;
+    }
 
     // Calculate drop position for combination area drops
     let dropPosition = null;
@@ -158,11 +183,15 @@ const CardStackingGame = () => {
       </div>
 
       <DragOverlay
-        dropAnimation={{
-          duration: 150,
-          easing: "ease-out",
-          sideEffects: () => {}, // Disable default fade-out of placeholder
-        }}
+        dropAnimation={
+          shouldSnapBack
+            ? {
+                duration: DRAG_SNAP_BACK_DURATION,
+                easing: "ease-out",
+                sideEffects: () => {}, // Disable default fade-out of placeholder
+              }
+            : null
+        }
       >
         {activeCard ? (
           <Card
