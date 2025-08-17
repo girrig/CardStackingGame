@@ -122,19 +122,15 @@ export const moveCardFromInventoryToCombination = (
   setCombinationAreaCards((prev: CardType[]) => [...prev, newCard]);
 
   // Then remove from inventory
-  if (card.quantity > 1) {
-    setInventory((prev: CardType[]) =>
-      sortCardsByQuantity(
-        prev.map((item) =>
+  setInventory((prev: CardType[]) =>
+    sortCardsByQuantity(
+      prev
+        .map((item) =>
           item.id === card.id ? { ...item, quantity: item.quantity - 1 } : item
         )
-      )
-    );
-  } else {
-    setInventory((prev: CardType[]) =>
-      sortCardsByQuantity(prev.filter((item) => item.id !== card.id))
-    );
-  }
+        .filter((item) => item.quantity > 0)
+    )
+  );
 };
 
 export const repositionCardInCombination = (
